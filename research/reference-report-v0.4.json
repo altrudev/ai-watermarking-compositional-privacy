@@ -1,0 +1,131 @@
+{
+  "research_scope": "synthetic-only",
+  "experiment": "transformation-order path dependence",
+  "population": {
+    "persons": 12,
+    "generations": 144
+  },
+  "transform_multiset": [
+    "paraphrase",
+    "summarize",
+    "translate",
+    "model_edit"
+  ],
+  "path_count": 24,
+  "random_person_baseline": 0.08333333333333333,
+  "controlled_conditions": {
+    "same_transform_multiset_every_path": true,
+    "same_transform_count_every_path": true,
+    "final_metadata_signature_count": 1,
+    "final_metadata_identical_across_paths": true,
+    "all_paths_remove_provider_and_watermark": true,
+    "order_is_primary_manipulated_variable": true
+  },
+  "person_top1": {
+    "minimum": 0.2569444444444444,
+    "maximum": 0.4444444444444444,
+    "mean": 0.3368055555555555,
+    "spread": 0.1875,
+    "spread_in_percentage_points": 18.75
+  },
+  "generation_top1": {
+    "minimum": 0.041666666666666664,
+    "maximum": 0.14583333333333334,
+    "mean": 0.0954861111111111
+  },
+  "unique_final_artifact_digests": 4,
+  "best_path": {
+    "path": [
+      "summarize",
+      "model_edit",
+      "translate",
+      "paraphrase"
+    ],
+    "person_top1": 0.2569444444444444,
+    "generation_top1": 0.041666666666666664,
+    "generation_top5": 0.3125,
+    "mean_anonymity_set": 23.055555555555557,
+    "strongest_channel": "lexical",
+    "strongest_channel_person_top1": 0.16666666666666666,
+    "utility": {
+      "semantic_retention": 0.9979655590152111,
+      "content_word_retention": 0.4495802813008233,
+      "length_ratio": 0.5000646378943865
+    }
+  },
+  "worst_path": {
+    "path": [
+      "paraphrase",
+      "translate",
+      "model_edit",
+      "summarize"
+    ],
+    "person_top1": 0.4444444444444444,
+    "generation_top1": 0.14583333333333334,
+    "generation_top5": 0.5277777777777778,
+    "mean_anonymity_set": 22.75,
+    "strongest_channel": "lexical",
+    "strongest_channel_person_top1": 0.2569444444444444,
+    "utility": {
+      "semantic_retention": 0.9941666870331535,
+      "content_word_retention": 0.45089871147530847,
+      "length_ratio": 0.5124369780529732
+    }
+  },
+  "mean_person_top1_by_first_transform": {
+    "paraphrase": 0.35763888888888884,
+    "summarize": 0.26388888888888884,
+    "translate": 0.3159722222222222,
+    "model_edit": 0.4097222222222222
+  },
+  "mean_person_top1_by_last_transform": {
+    "paraphrase": 0.3159722222222222,
+    "summarize": 0.4097222222222222,
+    "translate": 0.35763888888888884,
+    "model_edit": 0.26388888888888884
+  },
+  "pairwise_order_effects": {
+    "paraphrase_before_summarize": {
+      "left_before_right_mean_person_top1": 0.3680555555555555,
+      "right_before_left_mean_person_top1": 0.3055555555555555,
+      "difference": 0.0625
+    },
+    "paraphrase_before_translate": {
+      "left_before_right_mean_person_top1": 0.35763888888888884,
+      "right_before_left_mean_person_top1": 0.3159722222222222,
+      "difference": 0.04166666666666663
+    },
+    "paraphrase_before_model_edit": {
+      "left_before_right_mean_person_top1": 0.3194444444444444,
+      "right_before_left_mean_person_top1": 0.35416666666666663,
+      "difference": -0.03472222222222221
+    },
+    "summarize_before_translate": {
+      "left_before_right_mean_person_top1": 0.3194444444444444,
+      "right_before_left_mean_person_top1": 0.35416666666666663,
+      "difference": -0.03472222222222221
+    },
+    "summarize_before_model_edit": {
+      "left_before_right_mean_person_top1": 0.26388888888888884,
+      "right_before_left_mean_person_top1": 0.4097222222222222,
+      "difference": -0.14583333333333337
+    },
+    "translate_before_model_edit": {
+      "left_before_right_mean_person_top1": 0.3055555555555555,
+      "right_before_left_mean_person_top1": 0.3680555555555555,
+      "difference": -0.0625
+    }
+  },
+  "claim": {
+    "status": "path_dependent",
+    "materiality_threshold": 0.08333333333333333,
+    "statement": "The same transformation multiset produced materially different residual attribution when only transformation order changed.",
+    "boundary": "Synthetic identities, transparent deterministic transformations, and the declared attribution model only; this is not proof of behavior in deployed AI systems."
+  },
+  "standing_rules": [
+    "Privacy transformation != privacy evidence.",
+    "Failed re-identification != proven anonymity.",
+    "Intermediate unlinkability != end-to-end unlinkability.",
+    "Same transformations != same privacy outcome."
+  ]
+}
