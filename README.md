@@ -39,45 +39,74 @@ For AI provenance specifically:
 
 ## Unlinkability Lab v0.1
 
-The repository now includes the inverse experiment: instead of stopping after identifying possible linkage channels, the lab attempts to break those channels and then attacks its own privacy transformations with re-identification tests.
+The original inverse experiment uses abstract semantic/style vectors and synthetic-only identities. It remains frozen as the v0.1 baseline.
 
-**v0.1 is synthetic-only.** It does not ingest real people, real accounts, provider logs, scraped social profiles, or private identity datasets. The simulated watermark is an abstract provider/model signal, not an implementation or emulation of Claude, SynthID, OpenAI, Gemini, or another deployed watermark.
-
-The reference synthetic run contains 480 generation events. Under the strongest declared provider-plus-publisher evidence policy:
+Reference v0.1:
 
 - combined baseline person attribution: **82.08%**
 - after removing only the simulated provenance marker: **56.88%**
 - after the composite privacy transformation: **5.42%**
 - measured correlation gain over the strongest single signal: **47.91 percentage points**
 
-These results demonstrate behavior inside the controlled synthetic model; they are not claims about a deployed provider.
+Research files:
 
-The lab enforces two standing rules:
+- [`lab/unlinkability_lab.py`](lab/unlinkability_lab.py)
+- [`tests/test_unlinkability_lab.py`](tests/test_unlinkability_lab.py)
+- [`research/TEST_PLAN.md`](research/TEST_PLAN.md)
+- [`research/CLAIM_REGISTER.md`](research/CLAIM_REGISTER.md)
+- [`research/RESULTS-v0.1.md`](research/RESULTS-v0.1.md)
+- [`research/reference-report-v0.1.json`](research/reference-report-v0.1.json)
+
+## Textual Compositional Privacy Benchmark v0.2
+
+v0.2 moves the experiment to **actual generated synthetic text**. Semantic, lexical, and stylometric evidence is derived from the text itself, then combined with an abstract provenance signal, provider hint, and timing evidence.
+
+The reference run contains **36 synthetic people and 288 synthetic text generations**.
+
+- strongest single signal: **56.60%** person top-1
+- combined provider + publisher evidence: **74.65%** person top-1
+- measured compositional correlation gain: **18.06 percentage points**
+- after removing provenance/provider only: **71.88%** person top-1
+- after full composite transformation under an adaptive attack: **6.77%** person top-1
+- full-transform benchmark semantic retention: **100.00%**
+- full-transform exact-content retention: **61.18%**
+
+The adaptive attack calibrates on one partition of transformed artifacts and evaluates on another, so the privacy result is not merely failure of the original fixed evidence weighting.
+
+The benchmark preserves the standing rules:
 
 > **Privacy transformation ≠ privacy evidence.**
 
+> **Fixed-attack failure ≠ adaptive-attack failure.**
+
 > **Failed re-identification ≠ proven anonymity.**
+
+v0.2 files:
+
+- [`lab/textual_model.py`](lab/textual_model.py) — deterministic synthetic text population and transformations
+- [`lab/textual_attack.py`](lab/textual_attack.py) — adversary, attribution, and adaptive attack logic
+- [`lab/textual_benchmark.py`](lab/textual_benchmark.py) — reference benchmark/report runner
+- [`tests/test_textual_benchmark.py`](tests/test_textual_benchmark.py) — v0.2 adversarial regression suite
+- [`research/TEST_PLAN-v0.2.md`](research/TEST_PLAN-v0.2.md) — DDC-governed textual benchmark protocol
+- [`research/CLAIM_REGISTER-v0.2.md`](research/CLAIM_REGISTER-v0.2.md) — claim maturity and explicit non-claims
+- [`research/RESULTS-v0.2.md`](research/RESULTS-v0.2.md) — human-readable reference results
+- [`research/reference-report-v0.2.json`](research/reference-report-v0.2.json) — machine-readable experiment record
 
 Run locally with standard Python only:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m lab.unlinkability_lab
+python -m lab.textual_benchmark
 ```
 
-Research files:
-
-- [`lab/unlinkability_lab.py`](lab/unlinkability_lab.py) - deterministic attribution/unlinkability harness
-- [`tests/test_unlinkability_lab.py`](tests/test_unlinkability_lab.py) - adversarial regression suite
-- [`research/TEST_PLAN.md`](research/TEST_PLAN.md) - DDC-governed test plan and threat model
-- [`research/CLAIM_REGISTER.md`](research/CLAIM_REGISTER.md) - claim maturity and explicit non-claims
-- [`research/RESULTS-v0.1.md`](research/RESULTS-v0.1.md) - human-readable reference results
-- [`research/reference-report-v0.1.json`](research/reference-report-v0.1.json) - machine-readable experiment record
+Both v0.1 and v0.2 are synthetic research apparatus. They do not ingest real people, real accounts, provider logs, scraped social profiles, or private identity datasets. The simulated provenance signal is not an implementation or emulation of Claude, SynthID, OpenAI, Gemini, or another deployed watermark.
 
 ## Publication files
 
-- [`paper.md`](paper.md) - full research note
+- [`paper.md`](paper.md) - full published v1.0 research note
 - [`CITATION.cff`](CITATION.cff) - machine-readable citation metadata
+
+The published paper and the active research program are related but not identical: the paper is the immutable v1.0 publication, while this repository contains evolving experiments and evidence that must be cited by exact version/commit when used downstream.
 
 ## Suggested citation
 
@@ -87,7 +116,7 @@ Rukhaylo, Valentyn. *From Model Provenance to Human Attribution: The Composition
 
 The central system-level research question - whether non-identifying model provenance can become human attribution through correlation with generation and identity records - was formulated by **Valentyn Rukhaylo of Altru.dev on August 18, 2026**.
 
-Research assistance was provided using ChatGPT for literature discovery, source comparison, technical synthesis, drafting, and implementation of the synthetic unlinkability test harness. The publication and lab distinguish documented facts from derived architectural implications, experimental results, hypotheses, and explicit non-claims.
+Research assistance was provided using ChatGPT for literature discovery, source comparison, technical synthesis, drafting, and implementation of the synthetic unlinkability benchmarks. The publication and lab distinguish documented facts from derived architectural implications, experimental results, hypotheses, and explicit non-claims.
 
 ## Keywords
 
