@@ -1,0 +1,48 @@
+{
+  "research_scope": "synthetic-only",
+  "population": {"persons": 12, "generations": 144},
+  "random_person_baseline": 0.08333333333333333,
+  "chain": ["original", "edit", "paraphrase", "summarize", "translate", "model_edit", "multi_model_edit"],
+  "stage_metrics": {
+    "original": {"person_top1": 0.9861111111111112, "generation_top1": 0.5625, "generation_top5": 1.0, "mean_generation_rank": 1.4444444444444444, "mean_anonymity_set": 1.625},
+    "edit": {"person_top1": 0.9861111111111112, "generation_top1": 0.5625, "generation_top5": 1.0, "mean_generation_rank": 1.4444444444444444, "mean_anonymity_set": 1.625},
+    "paraphrase": {"person_top1": 0.3402777777777778, "generation_top1": 0.11805555555555555, "generation_top5": 0.5555555555555556, "mean_generation_rank": 6.368055555555555, "mean_anonymity_set": 1.8263888888888888},
+    "summarize": {"person_top1": 0.09027777777777778, "generation_top1": 0.041666666666666664, "generation_top5": 0.2222222222222222, "mean_generation_rank": 20.3125, "mean_anonymity_set": 3.673611111111111},
+    "translate": {"person_top1": 0.18055555555555555, "generation_top1": 0.06944444444444445, "generation_top5": 0.2361111111111111, "mean_generation_rank": 12.479166666666666, "mean_anonymity_set": 17.5625},
+    "model_edit": {"person_top1": 0.2708333333333333, "generation_top1": 0.08333333333333333, "generation_top5": 0.3402777777777778, "mean_generation_rank": 9.92361111111111, "mean_anonymity_set": 23.055555555555557},
+    "multi_model_edit": {"person_top1": 0.2569444444444444, "generation_top1": 0.0763888888888889, "generation_top5": 0.3472222222222222, "mean_generation_rank": 9.756944444444445, "mean_anonymity_set": 23.083333333333332}
+  },
+  "strongest_channel_by_stage": {
+    "original": "style",
+    "edit": "lexical",
+    "paraphrase": "style",
+    "summarize": "lexical",
+    "translate": "lexical",
+    "model_edit": "lexical",
+    "multi_model_edit": "lexical"
+  },
+  "channel_migration_events": [
+    {"from_stage": "original", "to_stage": "edit", "from_channel": "style", "to_channel": "lexical"},
+    {"from_stage": "edit", "to_stage": "paraphrase", "from_channel": "lexical", "to_channel": "style"},
+    {"from_stage": "paraphrase", "to_stage": "summarize", "from_channel": "style", "to_channel": "lexical"}
+  ],
+  "utility": {
+    "paraphrase": {"semantic_retention": 0.9977856666145851, "content_word_retention": 0.8547581283449609, "length_ratio": 0.9874983840526403},
+    "summarize": {"semantic_retention": 0.9971019901208473, "content_word_retention": 0.42914480024481255, "length_ratio": 0.4875630219470268},
+    "translate": {"semantic_retention": 0.9971019901208473, "content_word_retention": 0.37360658653165435, "length_ratio": 0.4875630219470268},
+    "model_edit": {"semantic_retention": 0.9971019901208473, "content_word_retention": 0.37360658653165435, "length_ratio": 0.4875630219470268},
+    "multi_model_edit": {"semantic_retention": 0.9971019901208473, "content_word_retention": 0.37360658653165435, "length_ratio": 0.4875630219470268}
+  },
+  "final_claim": {
+    "status": "not_supported",
+    "person_top1": 0.2569444444444444,
+    "boundary": "Declared synthetic population and scoring model only; not proof of anonymity."
+  },
+  "key_observation": "Attribution fell near random after summarization and later increased again, demonstrating non-monotonic privacy and channel migration in the declared synthetic benchmark.",
+  "limitations": [
+    "Synthetic identities and generated text only.",
+    "Translation is a deterministic proxy transformation, not a production translation model.",
+    "Model-edit stages are transparent deterministic proxies, not deployed proprietary model behavior.",
+    "Failed re-identification is evidence only for the declared test and adversary."
+  ]
+}
