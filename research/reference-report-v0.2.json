@@ -1,0 +1,203 @@
+{
+  "adaptive_calibration_single_signal_person_top1": {
+    "lexical": 0.10416666666666667,
+    "provider": 0.08333333333333333,
+    "semantic": 0.4791666666666667,
+    "style": 0.07291666666666667,
+    "time": 0.0,
+    "watermark": 0.08333333333333333
+  },
+  "adaptive_policy": {
+    "basis": "generation",
+    "lexical": 0.11151210413203032,
+    "provider": 0.08109971209602204,
+    "semantic": 0.6589351607801791,
+    "style": 0.06589351607801792,
+    "time": 0.0014597948177283969,
+    "watermark": 0.08109971209602204
+  },
+  "baseline": {
+    "ai_provider": {
+      "account_top1": 0.8854166666666666,
+      "false_attribution_rate": 0.11458333333333337,
+      "generation_top1": 0.8715277777777778,
+      "generation_top5": 0.9618055555555556,
+      "mean_anonymity_set": 11.520833333333334,
+      "mean_generation_rank": 1.4513888888888888,
+      "person_top1": 0.8854166666666666,
+      "samples": 288
+    },
+    "detector_operator": {
+      "account_top1": 0.08333333333333333,
+      "false_attribution_rate": 0.875,
+      "generation_top1": 0.020833333333333332,
+      "generation_top5": 0.10416666666666667,
+      "mean_anonymity_set": 3.65625,
+      "mean_generation_rank": 4.951388888888889,
+      "person_top1": 0.125,
+      "samples": 288
+    },
+    "provider_plus_publisher": {
+      "account_top1": 0.7465277777777778,
+      "false_attribution_rate": 0.2534722222222222,
+      "generation_top1": 0.46875,
+      "generation_top5": 1.0,
+      "mean_anonymity_set": 2.6458333333333335,
+      "mean_generation_rank": 1.8333333333333333,
+      "person_top1": 0.7465277777777778,
+      "samples": 288
+    },
+    "public_observer": {
+      "account_top1": 0.08333333333333333,
+      "false_attribution_rate": 0.8333333333333334,
+      "generation_top1": 0.020833333333333332,
+      "generation_top5": 0.10416666666666667,
+      "mean_anonymity_set": 2.5,
+      "mean_generation_rank": 3.454861111111111,
+      "person_top1": 0.16666666666666666,
+      "samples": 288
+    }
+  },
+  "boundaries": [
+    "synthetic identities and synthetic text only",
+    "simulated provenance signal only",
+    "no real provider detector",
+    "no real accounts or people",
+    "privacy transformation is not privacy evidence",
+    "failed re-identification is not proven anonymity"
+  ],
+  "claim": "SUPPORTED_FOR_DECLARED_TEST",
+  "composite_transform_adaptive_attack": {
+    "account_top1": 0.057291666666666664,
+    "false_attribution_rate": 0.9322916666666666,
+    "generation_top1": 0.046875,
+    "generation_top5": 0.23958333333333334,
+    "mean_anonymity_set": 40.161458333333336,
+    "mean_generation_rank": 15.9375,
+    "person_top1": 0.06770833333333333,
+    "samples": 192
+  },
+  "correlation_gain_pp": 18.0556,
+  "population": {
+    "accounts": 72,
+    "generations": 288,
+    "persons": 36,
+    "sessions": 144
+  },
+  "privacy_utility_frontier": [
+    {
+      "content_retention": 1.0,
+      "generation_top1": 0.7083333333333334,
+      "person_top1": 0.8541666666666666,
+      "semantic_retention": 1.0,
+      "strength": 0.0
+    },
+    {
+      "content_retention": 0.8990893606747836,
+      "generation_top1": 0.4427083333333333,
+      "person_top1": 0.5260416666666666,
+      "semantic_retention": 1.0,
+      "strength": 0.25
+    },
+    {
+      "content_retention": 0.7483576020109245,
+      "generation_top1": 0.2552083333333333,
+      "person_top1": 0.390625,
+      "semantic_retention": 1.0,
+      "strength": 0.5
+    },
+    {
+      "content_retention": 0.7001714350682947,
+      "generation_top1": 0.19270833333333334,
+      "person_top1": 0.328125,
+      "semantic_retention": 1.0,
+      "strength": 0.75
+    },
+    {
+      "content_retention": 0.6117513638616199,
+      "generation_top1": 0.046875,
+      "person_top1": 0.06770833333333333,
+      "semantic_retention": 1.0,
+      "strength": 1.0
+    }
+  ],
+  "provenance_removed_only": {
+    "account_top1": 0.5833333333333334,
+    "false_attribution_rate": 0.28125,
+    "generation_top1": 0.3576388888888889,
+    "generation_top5": 0.9201388888888888,
+    "mean_anonymity_set": 3.857638888888889,
+    "mean_generation_rank": 2.4583333333333335,
+    "person_top1": 0.71875,
+    "samples": 288
+  },
+  "schema": "altru.dev/textual-compositional-privacy-benchmark/0.2",
+  "seed": 73,
+  "single_signal": {
+    "lexical": {
+      "account_top1": 0.16666666666666666,
+      "false_attribution_rate": 0.7638888888888888,
+      "generation_top1": 0.1111111111111111,
+      "generation_top5": 0.2361111111111111,
+      "mean_anonymity_set": 39.50347222222222,
+      "mean_generation_rank": 19.1875,
+      "person_top1": 0.2361111111111111,
+      "samples": 288
+    },
+    "provider": {
+      "account_top1": 0.041666666666666664,
+      "false_attribution_rate": 0.9583333333333334,
+      "generation_top1": 0.010416666666666666,
+      "generation_top5": 0.052083333333333336,
+      "mean_anonymity_set": 96,
+      "mean_generation_rank": 48.5,
+      "person_top1": 0.041666666666666664,
+      "samples": 288
+    },
+    "semantic": {
+      "account_top1": 0.3125,
+      "false_attribution_rate": 0.6770833333333333,
+      "generation_top1": 0.2986111111111111,
+      "generation_top5": 0.5833333333333334,
+      "mean_anonymity_set": 45.670138888888886,
+      "mean_generation_rank": 8.73611111111111,
+      "person_top1": 0.3229166666666667,
+      "samples": 288
+    },
+    "style": {
+      "account_top1": 0.5520833333333334,
+      "false_attribution_rate": 0.4340277777777778,
+      "generation_top1": 0.5486111111111112,
+      "generation_top5": 0.84375,
+      "mean_anonymity_set": 126.05208333333333,
+      "mean_generation_rank": 12.631944444444445,
+      "person_top1": 0.5659722222222222,
+      "samples": 288
+    },
+    "time": {
+      "account_top1": 0.06597222222222222,
+      "false_attribution_rate": 0.8923611111111112,
+      "generation_top1": 0.003472222222222222,
+      "generation_top5": 0.059027777777777776,
+      "mean_anonymity_set": 9.5,
+      "mean_generation_rank": 34.27777777777778,
+      "person_top1": 0.1076388888888889,
+      "samples": 288
+    },
+    "watermark": {
+      "account_top1": 0.08333333333333333,
+      "false_attribution_rate": 0.9166666666666666,
+      "generation_top1": 0.020833333333333332,
+      "generation_top5": 0.10416666666666667,
+      "mean_anonymity_set": 48,
+      "mean_generation_rank": 24.5,
+      "person_top1": 0.08333333333333333,
+      "samples": 288
+    }
+  },
+  "status": "experimental-synthetic-benchmark",
+  "utility": {
+    "mean_content_retention": 0.6117513638616199,
+    "mean_semantic_retention": 1.0
+  }
+}
