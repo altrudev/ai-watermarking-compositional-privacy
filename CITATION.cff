@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use or discuss this research note, please cite it as below."
+title: "From Model Provenance to Human Attribution: The Compositional Privacy Risk of AI Text Watermarking"
+type: article
+version: "1.0"
+date-released: 2026-08-18
+url: "https://github.com/altrudev/ai-watermarking-compositional-privacy"
+repository-code: "https://github.com/altrudev/ai-watermarking-compositional-privacy"
+authors:
+  - family-names: Rukhaylo
+    given-names: Valentyn
+    affiliation: Altru.dev
+keywords:
+  - AI text watermarking
+  - AI provenance
+  - Claude watermark
+  - Anthropic
+  - AI privacy
+  - privacy engineering
+  - model attribution
+  - user attribution
+  - human attribution
+  - compositional privacy
+  - provenance-mediated identity linkage
+  - generative AI governance
+abstract: >-
+  This technical research note examines the compositional privacy risk of AI text watermarking and model provenance. It introduces provenance-mediated identity linkage: the risk that a non-identifying model-level provenance signal may still contribute to generation-event, account, organization, or human attribution when correlated with retained generation records, timestamps, session data, account metadata, semantic fingerprints, platform records, or other auxiliary information. It proposes a Compositional Privacy Invariant requiring identity-resolution transitions to be treated as separately authorized disclosure events.
