@@ -1,0 +1,115 @@
+{
+  "schema": "altru.dev/path-dependent-compositional-privacy/0.4",
+  "research_scope": "synthetic-only",
+  "source_experiment": "transformation-chain-attribution-persistence-v0.3",
+  "population": {
+    "persons": 8,
+    "generations": 96
+  },
+  "transform_set": [
+    "paraphrase",
+    "summarize",
+    "translate",
+    "model_edit",
+    "multi_model_edit"
+  ],
+  "orders_evaluated": 120,
+  "random_person_baseline": 0.125,
+  "order_sensitivity_threshold": 0.1,
+  "order_sensitivity": 0.16666666666666669,
+  "order_sensitivity_pp": 16.666666666666668,
+  "minimum_final_attribution": {
+    "person_top1": 0.3333333333333333,
+    "generation_top1": 0.09375,
+    "generation_top5": 0.4479166666666667,
+    "order": [
+      "summarize",
+      "model_edit",
+      "translate",
+      "paraphrase",
+      "multi_model_edit"
+    ],
+    "utility": {
+      "semantic_retention": 0.9978127129752677,
+      "content_word_retention": 0.4479617011092455,
+      "length_ratio": 0.498514678360567
+    }
+  },
+  "maximum_final_attribution": {
+    "person_top1": 0.5,
+    "generation_top1": 0.14583333333333334,
+    "generation_top5": 0.5104166666666666,
+    "order": [
+      "translate",
+      "paraphrase",
+      "multi_model_edit",
+      "model_edit",
+      "summarize"
+    ],
+    "utility": {
+      "semantic_retention": 0.9979638010528337,
+      "content_word_retention": 0.4309913084596307,
+      "length_ratio": 0.4858578977183935
+    }
+  },
+  "matched_utility_contrast": {
+    "person_top1_delta": 0.16666666666666669,
+    "lower_attribution": {
+      "person_top1": 0.3333333333333333,
+      "order": [
+        "summarize",
+        "translate",
+        "paraphrase",
+        "model_edit",
+        "multi_model_edit"
+      ],
+      "utility": {
+        "semantic_retention": 0.9978127129752677,
+        "content_word_retention": 0.4479617011092455,
+        "length_ratio": 0.498514678360567
+      }
+    },
+    "higher_attribution": {
+      "person_top1": 0.5,
+      "order": [
+        "translate",
+        "paraphrase",
+        "multi_model_edit",
+        "model_edit",
+        "summarize"
+      ],
+      "utility": {
+        "semantic_retention": 0.9979638010528337,
+        "content_word_retention": 0.4309913084596307,
+        "length_ratio": 0.4858578977183935
+      }
+    }
+  },
+  "person_top1_distribution": [
+    {"person_top1": 0.333333333333, "orders": 9},
+    {"person_top1": 0.34375, "orders": 1},
+    {"person_top1": 0.354166666667, "orders": 16},
+    {"person_top1": 0.395833333333, "orders": 4},
+    {"person_top1": 0.427083333333, "orders": 11},
+    {"person_top1": 0.458333333333, "orders": 29},
+    {"person_top1": 0.46875, "orders": 10},
+    {"person_top1": 0.479166666667, "orders": 20},
+    {"person_top1": 0.489583333333, "orders": 10},
+    {"person_top1": 0.5, "orders": 10}
+  ],
+  "full_reference_stdout_sha256": "e65c77293fe2e81f7645b89b9e3a014342ca8007c4f1be202f08951fbe75edcb",
+  "full_reference_result_count": 120,
+  "final_claim": {
+    "status": "supported_for_declared_test",
+    "proposition": "The same declared transformation set can produce materially different attribution outcomes when transformation order changes.",
+    "boundary": "Declared synthetic population, transparent proxy transformations, scoring model, and threshold only; not proof of real-world anonymity or path dependence."
+  },
+  "limitations": [
+    "Synthetic identities and generated synthetic text only.",
+    "Transformations are transparent deterministic proxies, not proprietary production models.",
+    "The neutral v0.3 edit stage is excluded because it did not alter the v0.3 reference attribution result.",
+    "Final-artifact privacy is evaluated under the declared attribution model only.",
+    "A low-attribution intermediate or final state is not proof of anonymity.",
+    "A supported path-dependence result is an experimental property of this declared benchmark, not a universal privacy law."
+  ]
+}
