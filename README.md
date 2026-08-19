@@ -39,7 +39,7 @@ For AI provenance specifically:
 
 ## Unlinkability Lab v0.1
 
-The repository now includes the inverse experiment: instead of stopping after identifying possible linkage channels, the lab attempts to break those channels and then attacks its own privacy transformations with re-identification tests.
+The repository includes the inverse experiment: instead of stopping after identifying possible linkage channels, the lab attempts to break those channels and then attacks its own privacy transformations with re-identification tests.
 
 **v0.1 is synthetic-only.** It does not ingest real people, real accounts, provider logs, scraped social profiles, or private identity datasets. The simulated watermark is an abstract provider/model signal, not an implementation or emulation of Claude, SynthID, OpenAI, Gemini, or another deployed watermark.
 
@@ -52,7 +52,27 @@ The reference synthetic run contains 480 generation events. Under the strongest 
 
 These results demonstrate behavior inside the controlled synthetic model; they are not claims about a deployed provider.
 
-The lab enforces two standing rules:
+## Unlinkability Lab v0.2 — actual synthetic text
+
+v0.2 replaces the abstract semantic/style vectors with **actual generated text** and derives linkage evidence from the text itself: lexical surface features, semantic topic features, and a 16-dimension stylometric profile. It retains the simulated provenance, provider, and timing channels so the experiment can measure how independent weak signals compose.
+
+The public artifact is deliberately an edited derivative rather than a byte-identical copy of the synthetic generation. This prevents exact text equality from trivially becoming the experiment.
+
+Reference v0.2 population: **24 synthetic persons / 288 generation events**.
+
+| Condition | Person top-1 | Generation top-1 |
+|---|---:|---:|
+| Combined evidence | **81.94%** | **44.44%** |
+| Provenance removed only | **28.47%** | **12.15%** |
+| Composite privacy transform | **3.12%** | **0.69%** |
+
+The strongest individual person-attribution signal was only **20.83%**. Combining the available signals increased attribution to **81.94%**, a **61.11 percentage-point correlation gain** inside the declared synthetic-text model.
+
+The composite transform retained approximately **84.04% topic/semantic utility**, **85.51% content-word retention**, and **91.19% text-length retention** under the lab's internal measures. These are synthetic utility measurements, not a claim of human-perceived quality or anonymity.
+
+A useful negative result also appeared: changing stylometry alone did not materially improve system-level privacy in the combined test because other linkage channels continued to dominate. That is why the lab evaluates transformations against the complete evidence composition rather than grading each transformation in isolation.
+
+The lab preserves two standing rules:
 
 > **Privacy transformation ≠ privacy evidence.**
 
@@ -61,18 +81,28 @@ The lab enforces two standing rules:
 Run locally with standard Python only:
 
 ```bash
+python -m py_compile lab/text_unlinkability_lab.py tests/test_text_unlinkability_lab.py
 python -m unittest discover -s tests -v
-python -m lab.unlinkability_lab
+python -m lab.text_unlinkability_lab
 ```
 
 Research files:
 
-- [`lab/unlinkability_lab.py`](lab/unlinkability_lab.py) - deterministic attribution/unlinkability harness
-- [`tests/test_unlinkability_lab.py`](tests/test_unlinkability_lab.py) - adversarial regression suite
-- [`research/TEST_PLAN.md`](research/TEST_PLAN.md) - DDC-governed test plan and threat model
-- [`research/CLAIM_REGISTER.md`](research/CLAIM_REGISTER.md) - claim maturity and explicit non-claims
-- [`research/RESULTS-v0.1.md`](research/RESULTS-v0.1.md) - human-readable reference results
-- [`research/reference-report-v0.1.json`](research/reference-report-v0.1.json) - machine-readable experiment record
+### v0.1
+- [`lab/unlinkability_lab.py`](lab/unlinkability_lab.py) - deterministic abstract attribution/unlinkability harness
+- [`tests/test_unlinkability_lab.py`](tests/test_unlinkability_lab.py) - v0.1 adversarial regression suite
+- [`research/TEST_PLAN.md`](research/TEST_PLAN.md) - v0.1 DDC-governed test plan and threat model
+- [`research/CLAIM_REGISTER.md`](research/CLAIM_REGISTER.md) - v0.1 claim maturity and explicit non-claims
+- [`research/RESULTS-v0.1.md`](research/RESULTS-v0.1.md) - human-readable v0.1 reference results
+- [`research/reference-report-v0.1.json`](research/reference-report-v0.1.json) - machine-readable v0.1 experiment record
+
+### v0.2
+- [`lab/text_unlinkability_lab.py`](lab/text_unlinkability_lab.py) - actual synthetic-text attribution/unlinkability harness
+- [`tests/test_text_unlinkability_lab.py`](tests/test_text_unlinkability_lab.py) - actual-text adversarial regression suite
+- [`research/TEST_PLAN-v0.2.md`](research/TEST_PLAN-v0.2.md) - DDC-governed v0.2 test plan
+- [`research/CLAIM_REGISTER-v0.2.md`](research/CLAIM_REGISTER-v0.2.md) - v0.2 claim register and non-claims
+- [`research/RESULTS-v0.2.md`](research/RESULTS-v0.2.md) - v0.2 results and interpretation boundary
+- [`research/reference-report-v0.2.json`](research/reference-report-v0.2.json) - machine-readable v0.2 result record
 
 ## Publication files
 
@@ -91,4 +121,4 @@ Research assistance was provided using ChatGPT for literature discovery, source 
 
 ## Keywords
 
-AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · generative AI governance · AI accountability · digital privacy
+AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · generative AI governance · AI accountability · digital privacy
