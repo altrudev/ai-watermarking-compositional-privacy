@@ -100,17 +100,47 @@ This adds two standing distinctions:
 
 > **Final artifact state ≠ complete privacy lineage.**
 
+## Unlinkability Lab v0.4 — transformation path dependence
+
+v0.4 holds the transformation set constant and changes only the order. It evaluates all **24 permutations** of:
+
+`paraphrase + summarize + translate + model edit`
+
+Every path starts from the same artifacts, applies each transform exactly once, ends with identical metadata, removes the same simulated provenance fields, and has the same cumulative publication delay.
+
+Yet person attribution ranges from **25.69% to 44.44%** — an **18.75 percentage-point spread** against an 8.33% random-person baseline.
+
+Lowest residual attribution:
+
+`summary → model edit → translate → paraphrase` → **25.69%**
+
+Highest residual attribution:
+
+`paraphrase → translate → model edit → summary` → **44.44%**
+
+The strongest pairwise ordering effect was between summarization and model editing: paths with summarization before model editing averaged **26.39%** person attribution, while the reverse order averaged **40.97%**.
+
+v0.4 therefore adds:
+
+> **Transformation Set ≠ Transformation History ≠ Privacy Outcome.**
+
+And the proposed **Privacy Path Dependence Invariant**:
+
+> A privacy claim about a transformed artifact must preserve and evaluate the ordered transformation history. The same set of privacy transformations must not be assumed to produce equivalent unlinkability when their order differs.
+
 The lab preserves the earlier rules:
 
 > **Privacy transformation ≠ privacy evidence.**
 
 > **Failed re-identification ≠ proven anonymity.**
 
+> **Intermediate unlinkability ≠ end-to-end unlinkability.**
+
 Run locally with standard Python only:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m lab.transformation_chain_lab
+python -m lab.path_dependence_lab
 ```
 
 Research files:
@@ -140,6 +170,15 @@ Research files:
 - [`research/VALIDATION-v0.3.md`](research/VALIDATION-v0.3.md) - exact-source validation record
 - [`research/reference-report-v0.3.json`](research/reference-report-v0.3.json) - machine-readable v0.3 result record
 
+### v0.4
+- [`lab/path_dependence_lab.py`](lab/path_dependence_lab.py) - exhaustive transformation-order experiment
+- [`tests/test_path_dependence_lab.py`](tests/test_path_dependence_lab.py) - v0.4 path-dependence regression suite
+- [`research/TEST_PLAN-v0.4.md`](research/TEST_PLAN-v0.4.md) - DDC-governed v0.4 test plan
+- [`research/CLAIM_REGISTER-v0.4.md`](research/CLAIM_REGISTER-v0.4.md) - v0.4 claims and explicit non-claims
+- [`research/RESULTS-v0.4.md`](research/RESULTS-v0.4.md) - path-dependence results
+- [`research/VALIDATION-v0.4.md`](research/VALIDATION-v0.4.md) - v0.4 validation record
+- [`research/reference-report-v0.4.json`](research/reference-report-v0.4.json) - machine-readable v0.4 result record
+
 ## Publication files
 
 - [`paper.md`](paper.md) - full research note
@@ -157,4 +196,4 @@ Research assistance was provided using ChatGPT for literature discovery, source 
 
 ## Keywords
 
-AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · transformation lineage · generative AI governance · AI accountability · digital privacy
+AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · transformation lineage · path dependence · generative AI governance · AI accountability · digital privacy
