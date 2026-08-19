@@ -35,7 +35,7 @@ claim: ROBUST_IN_DECLARED_MATRIX
 
 - `lab/robustness_lab.py`: `002ef54768d32b1ec34f1c6fbf38bd08aacf42941081ff7693d5a7115deeefa7`
 - `tests/test_robustness_lab.py`: `3d519086cf69d6a120571c5ae8fd92ecd7f59400e925fbf5bf272ab46e2323b6`
-- `research/reference-report-v0.5.json`: `a7f3304b5673ffac1e93931cb0c177cdbe71e5f73a88470a84b6d601ab64bc99`
+- `research/reference-report-v0.5.json`: `10222bac8de7d94fb258927523654e3d29253fd3308af537231e2618fb5c4baa`
 
 ## Repository transition gate
 
