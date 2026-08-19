@@ -128,6 +128,22 @@ And the proposed **Privacy Path Dependence Invariant**:
 
 > A privacy claim about a transformed artifact must preserve and evaluate the ordered transformation history. The same set of privacy transformations must not be assumed to produce equivalent unlinkability when their order differs.
 
+## Unlinkability Lab v0.5 — robustness of path dependence
+
+v0.5 tests whether the v0.4 ordering effect survives changes in population size, random seed, source-text length, transformation strength, seeded stochastic behavior, and attribution-policy weights. It also adds a commuting-order negative control.
+
+The full canonical scenario exactly reproduces v0.4. Across the **13-scenario** robustness matrix, transformation-order path dependence remained material in **12/13 scenarios (92.31%)**. The only non-material condition was the half-strength transform case, where all 24 orders produced the same person-attribution result.
+
+The commuting control reverses `lowercase` and `normalize whitespace`; both orders produce identical final text and metadata, confirming that the harness does not report path dependence merely because operations were permuted.
+
+v0.5 therefore adds:
+
+> **Single Benchmark Result ≠ Robust System Property.**
+
+And the proposed **Privacy Robustness Invariant**:
+
+> A privacy property inferred from one transformation path, population, seed, model, or scoring policy must not be promoted to a system-level property until it survives declared perturbation tests, includes negative controls, and preserves the conditions under which the property fails.
+
 The lab preserves the earlier rules:
 
 > **Privacy transformation ≠ privacy evidence.**
@@ -140,7 +156,7 @@ Run locally with standard Python only:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m lab.path_dependence_lab
+python -m lab.robustness_lab
 ```
 
 Research files:
@@ -179,6 +195,15 @@ Research files:
 - [`research/VALIDATION-v0.4.md`](research/VALIDATION-v0.4.md) - v0.4 validation record
 - [`research/reference-report-v0.4.json`](research/reference-report-v0.4.json) - machine-readable v0.4 result record
 
+### v0.5
+- [`lab/robustness_lab.py`](lab/robustness_lab.py) - path-dependence robustness matrix and negative control
+- [`tests/test_robustness_lab.py`](tests/test_robustness_lab.py) - v0.5 regression/adversarial suite
+- [`research/TEST_PLAN-v0.5.md`](research/TEST_PLAN-v0.5.md) - DDC-governed robustness test plan
+- [`research/CLAIM_REGISTER-v0.5.md`](research/CLAIM_REGISTER-v0.5.md) - v0.5 claims and explicit non-claims
+- [`research/RESULTS-v0.5.md`](research/RESULTS-v0.5.md) - robustness results and boundary case
+- [`research/VALIDATION-v0.5.md`](research/VALIDATION-v0.5.md) - exact-source validation record
+- [`research/reference-report-v0.5.json`](research/reference-report-v0.5.json) - machine-readable v0.5 record
+
 ## Publication files
 
 - [`paper.md`](paper.md) - full research note
@@ -196,4 +221,4 @@ Research assistance was provided using ChatGPT for literature discovery, source 
 
 ## Keywords
 
-AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · transformation lineage · path dependence · generative AI governance · AI accountability · digital privacy
+AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · transformation lineage · path dependence · privacy robustness · generative AI governance · AI accountability · digital privacy
