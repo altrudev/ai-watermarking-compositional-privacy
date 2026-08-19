@@ -72,7 +72,35 @@ The composite transform retained approximately **84.04% topic/semantic utility**
 
 A useful negative result also appeared: changing stylometry alone did not materially improve system-level privacy in the combined test because other linkage channels continued to dominate. That is why the lab evaluates transformations against the complete evidence composition rather than grading each transformation in isolation.
 
-The lab preserves two standing rules:
+## Unlinkability Lab v0.3 — transformation-chain persistence
+
+v0.3 tests whether privacy improvement is monotonic across a complete transformation history:
+
+`original → edit → paraphrase → summarize → translate → model edit → multi-model edit`
+
+The reference run uses **12 synthetic persons / 144 generation events**. Random person attribution is **8.33%**.
+
+| Stage | Person top-1 |
+|---|---:|
+| Original publication derivative | **98.61%** |
+| Edit | **98.61%** |
+| Paraphrase + provenance removal | **34.03%** |
+| Summarize | **9.03%** |
+| Translate proxy | **18.06%** |
+| Model-edit proxy | **27.08%** |
+| Multi-model-edit proxy | **25.69%** |
+
+The important result is negative: **privacy was not monotonic**. Attribution fell close to random after summarization, then increased again during later transformations. The strongest individual linkage channel also migrated `style → lexical → style → lexical` during the chain.
+
+The final chain therefore receives `NOT_SUPPORTED` for the declared unlinkability threshold. v0.3 preserves the adverse result rather than tuning later transforms until the benchmark passes.
+
+This adds two standing distinctions:
+
+> **Intermediate unlinkability ≠ end-to-end unlinkability.**
+
+> **Final artifact state ≠ complete privacy lineage.**
+
+The lab preserves the earlier rules:
 
 > **Privacy transformation ≠ privacy evidence.**
 
@@ -81,9 +109,8 @@ The lab preserves two standing rules:
 Run locally with standard Python only:
 
 ```bash
-python -m py_compile lab/text_unlinkability_lab.py tests/test_text_unlinkability_lab.py
 python -m unittest discover -s tests -v
-python -m lab.text_unlinkability_lab
+python -m lab.transformation_chain_lab
 ```
 
 Research files:
@@ -104,6 +131,15 @@ Research files:
 - [`research/RESULTS-v0.2.md`](research/RESULTS-v0.2.md) - v0.2 results and interpretation boundary
 - [`research/reference-report-v0.2.json`](research/reference-report-v0.2.json) - machine-readable v0.2 result record
 
+### v0.3
+- [`lab/transformation_chain_lab.py`](lab/transformation_chain_lab.py) - transformation-history and channel-migration harness
+- [`tests/test_transformation_chain_lab.py`](tests/test_transformation_chain_lab.py) - v0.3 adversarial regression suite
+- [`research/TEST_PLAN-v0.3.md`](research/TEST_PLAN-v0.3.md) - v0.3 DDC-governed test plan
+- [`research/CLAIM_REGISTER-v0.3.md`](research/CLAIM_REGISTER-v0.3.md) - v0.3 claim register and explicit non-claims
+- [`research/RESULTS-v0.3.md`](research/RESULTS-v0.3.md) - transformation-chain results
+- [`research/VALIDATION-v0.3.md`](research/VALIDATION-v0.3.md) - exact-source validation record
+- [`research/reference-report-v0.3.json`](research/reference-report-v0.3.json) - machine-readable v0.3 result record
+
 ## Publication files
 
 - [`paper.md`](paper.md) - full research note
@@ -121,4 +157,4 @@ Research assistance was provided using ChatGPT for literature discovery, source 
 
 ## Keywords
 
-AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · generative AI governance · AI accountability · digital privacy
+AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · transformation lineage · generative AI governance · AI accountability · digital privacy
