@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 from itertools import combinations, permutations
-from math import sqrt
+from math import exp, sqrt
 from statistics import mean
 from typing import Sequence
 import json
 
 from lab.transformation_chain_lab import (
     Artifact,
+    Metrics,
     SINGLE_SIGNALS,
     WEIGHTS,
     cosine,
@@ -33,6 +34,77 @@ TRANSFORMS = {
 TRANSFORM_NAMES = tuple(TRANSFORMS)
 
 
+def _features(text: str):
+    return lexical_vector(text), semantic_vector(text), style_vector(text)
+
+
+class CachedEvaluator:
+    """Exact v0.3 scoring semantics with candidate features cached once."""
+
+    def __init__(self, population):
+        self.population = list(population)
+        self.by_generation = {row.generation_id: row for row in self.population}
+        self.candidate_features = {
+            row.generation_id: _features(row.text) for row in self.population
+        }
+
+    def evaluate(self, artifacts: Sequence[Artifact], weights=WEIGHTS) -> Metrics:
+        total = sum(weights)
+        normalized = [value / total for value in weights]
+        person_top1 = generation_top1 = generation_top5 = 0
+        ranks = []
+        anonymity_sets = []
+        for artifact in artifacts:
+            target = self.by_generation[artifact.target_generation_id]
+            artifact_features = _features(artifact.text)
+            ranked = []
+            for candidate in self.population:
+                candidate_features = self.candidate_features[candidate.generation_id]
+                lexical = (cosine(artifact_features[0], candidate_features[0]) + 1) / 2
+                semantic = (cosine(artifact_features[1], candidate_features[1]) + 1) / 2
+                style = (cosine(artifact_features[2], candidate_features[2]) + 1) / 2
+                watermark = float(
+                    artifact.watermark_family is not None
+                    and artifact.watermark_family == candidate.watermark_family
+                )
+                provider = float(
+                    artifact.provider_hint is not None
+                    and artifact.provider_hint == candidate.provider
+                )
+                delta = artifact.published_minute - candidate.created_minute
+                timing = exp(-delta / 50) if delta >= 0 else 0.0
+                score = sum(
+                    value * weight
+                    for value, weight in zip(
+                        (lexical, semantic, style, watermark, provider, timing),
+                        normalized,
+                    )
+                )
+                ranked.append((candidate, score))
+            ranked.sort(key=lambda item: (-item[1], item[0].generation_id))
+            position = next(
+                index
+                for index, (candidate, _score) in enumerate(ranked)
+                if candidate.generation_id == target.generation_id
+            )
+            predicted = ranked[0][0]
+            person_top1 += predicted.person_id == target.person_id
+            generation_top1 += position == 0
+            generation_top5 += position < 5
+            ranks.append(position + 1)
+            best = ranked[0][1]
+            anonymity_sets.append(sum(score >= best - 0.02 for _candidate, score in ranked))
+        count = len(artifacts)
+        return Metrics(
+            count,
+            person_top1 / count,
+            generation_top1 / count,
+            generation_top5 / count,
+            mean(ranks),
+            mean(anonymity_sets),
+        )
+
+
 def _apply(artifacts: Sequence[Artifact], path: Sequence[str]) -> list[Artifact]:
     current = list(artifacts)
     for name in path:
@@ -55,19 +127,19 @@ def _metadata_signature(artifacts: Sequence[Artifact]):
 
 
 def _mean_feature_divergence(left: Sequence[Artifact], right: Sequence[Artifact], vectorizer) -> float:
-    rows = []
-    for a, b in zip(left, right):
-        rows.append(1.0 - max(-1.0, min(1.0, cosine(vectorizer(a.text), vectorizer(b.text)))))
-    return mean(rows)
+    return mean(
+        1.0 - max(-1.0, min(1.0, cosine(vectorizer(a.text), vectorizer(b.text))))
+        for a, b in zip(left, right)
+    )
 
 
 def _text_difference_fraction(left: Sequence[Artifact], right: Sequence[Artifact]) -> float:
     return mean(float(a.text != b.text) for a, b in zip(left, right))
 
 
-def _channel_metrics(population, artifacts):
+def _channel_metrics(evaluator: CachedEvaluator, artifacts):
     return {
-        name: asdict(evaluate(population, artifacts, weights))
+        name: asdict(evaluator.evaluate(artifacts, weights))
         for name, weights in SINGLE_SIGNALS.items()
     }
 
@@ -88,16 +160,16 @@ def _pair_key(left: str, right: str) -> str:
     return f"{left}|{right}"
 
 
-def pairwise_mechanisms(population, original: Sequence[Artifact]) -> dict:
+def pairwise_mechanisms(evaluator: CachedEvaluator, original: Sequence[Artifact]) -> dict:
     rows = {}
     directional_effects = {}
     for left, right in combinations(TRANSFORM_NAMES, 2):
         left_right = _apply(original, (left, right))
         right_left = _apply(original, (right, left))
-        lr_metrics = asdict(evaluate(population, left_right, WEIGHTS))
-        rl_metrics = asdict(evaluate(population, right_left, WEIGHTS))
-        lr_channels = _channel_metrics(population, left_right)
-        rl_channels = _channel_metrics(population, right_left)
+        lr_metrics = asdict(evaluator.evaluate(left_right, WEIGHTS))
+        rl_metrics = asdict(evaluator.evaluate(right_left, WEIGHTS))
+        lr_channels = _channel_metrics(evaluator, left_right)
+        rl_channels = _channel_metrics(evaluator, right_left)
         channel_deltas = {
             name: lr_channels[name]["person_top1"] - rl_channels[name]["person_top1"]
             for name in SINGLE_SIGNALS
@@ -128,12 +200,12 @@ def pairwise_mechanisms(population, original: Sequence[Artifact]) -> dict:
     return {"pairs": rows, "directional_person_effects": directional_effects}
 
 
-def full_path_prediction(population, original: Sequence[Artifact], directional_effects: dict[str, float]) -> dict:
+def full_path_prediction(evaluator: CachedEvaluator, original: Sequence[Artifact], directional_effects: dict[str, float]) -> dict:
     rows = []
     ordered_pairs = list(combinations(TRANSFORM_NAMES, 2))
     for path in permutations(TRANSFORM_NAMES):
         final = _apply(original, path)
-        observed = evaluate(population, final, WEIGHTS).person_top1
+        observed = evaluator.evaluate(final, WEIGHTS).person_top1
         score = 0.0
         for left, right in ordered_pairs:
             effect = directional_effects[_pair_key(left, right)]
@@ -143,18 +215,14 @@ def full_path_prediction(population, original: Sequence[Artifact], directional_e
         [row["pairwise_score"] for row in rows],
         [row["observed_person_top1"] for row in rows],
     )
-    return {
-        "path_count": len(rows),
-        "pearson_r": correlation,
-        "paths": rows,
-    }
+    return {"path_count": len(rows), "pearson_r": correlation, "paths": rows}
 
 
-def commuting_control(population, original: Sequence[Artifact]) -> dict:
+def commuting_control(evaluator: CachedEvaluator, original: Sequence[Artifact]) -> dict:
     lower_then_space = [replace(row, text=" ".join(row.text.lower().split())) for row in original]
     space_then_lower = [replace(row, text=" ".join(row.text.split()).lower()) for row in original]
-    left_metrics = evaluate(population, lower_then_space, WEIGHTS)
-    right_metrics = evaluate(population, space_then_lower, WEIGHTS)
+    left_metrics = evaluator.evaluate(lower_then_space, WEIGHTS)
+    right_metrics = evaluator.evaluate(space_then_lower, WEIGHTS)
     text_equal = all(a.text == b.text for a, b in zip(lower_then_space, space_then_lower))
     metadata_equal = _metadata_signature(lower_then_space) == _metadata_signature(space_then_lower)
     return {
@@ -175,11 +243,14 @@ def commuting_control(population, original: Sequence[Artifact]) -> dict:
 def run_experiment(persons: int = 12, seed: int = 41, artifact_seed: int = 7000) -> dict:
     population = generate_population(persons, seed)
     original = make_artifacts(population, seed=artifact_seed)
-    pairwise = pairwise_mechanisms(population, original)
-    prediction = full_path_prediction(population, original, pairwise["directional_person_effects"])
-    control = commuting_control(population, original)
+    evaluator = CachedEvaluator(population)
+    parity_path = _apply(original, ("summarize", "model_edit"))
+    parity = asdict(evaluator.evaluate(parity_path, WEIGHTS)) == asdict(evaluate(population, parity_path, WEIGHTS))
+    pairwise = pairwise_mechanisms(evaluator, original)
+    prediction = full_path_prediction(evaluator, original, pairwise["directional_person_effects"])
+    control = commuting_control(evaluator, original)
     r = prediction["pearson_r"]
-    if not control["control_pass"]:
+    if not parity or not control["control_pass"]:
         status = "CONTROL_FAILED"
     elif r >= 0.70:
         status = "PAIRWISE_MECHANISM_PREDICTIVE_FOR_DECLARED_TEST"
@@ -198,6 +269,7 @@ def run_experiment(persons: int = 12, seed: int = 41, artifact_seed: int = 7000)
             "artifact_seed": artifact_seed,
             "transforms": list(TRANSFORM_NAMES),
         },
+        "cached_evaluator_parity": parity,
         "pairwise": pairwise,
         "full_path_prediction": prediction,
         "commuting_control": control,
