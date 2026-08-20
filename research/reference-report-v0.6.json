@@ -1,0 +1,71 @@
+{
+  "cached_evaluator_parity": true,
+  "claim": {
+    "boundary": "Declared synthetic population, transparent transformations, and attribution model only; not proof of anonymity or deployed-provider mechanism.",
+    "status": "PAIRWISE_MECHANISM_PREDICTIVE_FOR_DECLARED_TEST"
+  },
+  "commuting_control": {
+    "control_pass": true,
+    "final_metadata_identical": true,
+    "final_text_identical": true,
+    "generation_top1_difference": 0.0,
+    "operations": [
+      "lowercase",
+      "normalize_whitespace"
+    ],
+    "person_top1_difference": 0.0
+  },
+  "full_path_prediction": {
+    "path_count": 24,
+    "paths": [
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.25,"path":["paraphrase","summarize","translate","model_edit"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.25,"path":["paraphrase","summarize","model_edit","translate"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.2222222222222222,"path":["paraphrase","translate","summarize","model_edit"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["paraphrase","translate","model_edit","summarize"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.2222222222222222,"path":["paraphrase","model_edit","summarize","translate"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.2222222222222222,"path":["paraphrase","model_edit","translate","summarize"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.25,"path":["summarize","paraphrase","translate","model_edit"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.25,"path":["summarize","paraphrase","model_edit","translate"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.25,"path":["summarize","translate","paraphrase","model_edit"]},
+      {"observed_person_top1":0.3541666666666667,"pairwise_score":-0.2222222222222222,"path":["summarize","translate","model_edit","paraphrase"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.25,"path":["summarize","model_edit","paraphrase","translate"]},
+      {"observed_person_top1":0.3402777777777778,"pairwise_score":-0.2222222222222222,"path":["summarize","model_edit","translate","paraphrase"]},
+      {"observed_person_top1":0.3541666666666667,"pairwise_score":-0.2222222222222222,"path":["translate","paraphrase","summarize","model_edit"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["translate","paraphrase","model_edit","summarize"]},
+      {"observed_person_top1":0.3541666666666667,"pairwise_score":-0.2222222222222222,"path":["translate","summarize","paraphrase","model_edit"]},
+      {"observed_person_top1":0.3541666666666667,"pairwise_score":-0.2222222222222222,"path":["translate","summarize","model_edit","paraphrase"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["translate","model_edit","paraphrase","summarize"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["translate","model_edit","summarize","paraphrase"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.2222222222222222,"path":["model_edit","paraphrase","summarize","translate"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.2222222222222222,"path":["model_edit","paraphrase","translate","summarize"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.2222222222222222,"path":["model_edit","summarize","paraphrase","translate"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["model_edit","summarize","translate","paraphrase"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["model_edit","translate","paraphrase","summarize"]},
+      {"observed_person_top1":0.5763888888888888,"pairwise_score":0.25,"path":["model_edit","translate","summarize","paraphrase"]}
+    ],
+    "pearson_r": 0.9282921071911276
+  },
+  "pairwise": {
+    "directional_person_effects": {
+      "paraphrase|model_edit": 0.0,
+      "paraphrase|summarize": 0.0,
+      "paraphrase|translate": -0.013888888888888895,
+      "summarize|model_edit": -0.2361111111111111,
+      "summarize|translate": 0.0,
+      "translate|model_edit": 0.0
+    },
+    "pairs": {
+      "paraphrase|summarize": {"combined":{"absolute_person_top1_difference":0.0,"left_before_right":{"generation_top1":0.11805555555555555,"generation_top5":0.5208333333333334,"mean_anonymity_set":1.8333333333333333,"mean_generation_rank":10.215277777777779,"person_top1":0.3402777777777778,"samples":144},"right_before_left":{"generation_top1":0.11805555555555555,"generation_top5":0.5208333333333334,"mean_anonymity_set":1.8333333333333333,"mean_generation_rank":10.215277777777779,"person_top1":0.3402777777777778,"samples":144},"signed_generation_top1_difference":0.0,"signed_person_top1_difference":0.0},"feature_divergence":{"lexical":0.0,"semantic":0.0,"style":5.628213944280307e-17},"final_metadata_identical":true,"largest_changed_channel":"lexical","left_before_right":["paraphrase","summarize"],"right_before_left":["summarize","paraphrase"],"single_channel_person_top1_difference":{"lexical":0.0,"semantic":0.0,"style":0.0,"time":0.0,"watermark":0.0},"text_difference_fraction":0.0},
+      "paraphrase|translate": {"combined":{"absolute_person_top1_difference":0.013888888888888895,"left_before_right":{"generation_top1":0.1597222222222222,"generation_top5":0.625,"mean_anonymity_set":1.7708333333333333,"mean_generation_rank":8.23611111111111,"person_top1":0.4097222222222222,"samples":144},"right_before_left":{"generation_top1":0.1527777777777778,"generation_top5":0.6180555555555556,"mean_anonymity_set":1.8055555555555556,"mean_generation_rank":8.381944444444445,"person_top1":0.4236111111111111,"samples":144},"signed_generation_top1_difference":0.006944444444444448,"signed_person_top1_difference":-0.013888888888888895},"feature_divergence":{"lexical":0.2938648250787639,"semantic":0.004428666770829822,"style":3.5278630173019945e-06},"final_metadata_identical":true,"largest_changed_channel":"lexical","left_before_right":["paraphrase","translate"],"right_before_left":["translate","paraphrase"],"single_channel_person_top1_difference":{"lexical":-0.048611111111111105,"semantic":0.0,"style":-0.013888888888888895,"time":0.0,"watermark":0.0},"text_difference_fraction":1.0},
+      "paraphrase|model_edit": {"combined":{"absolute_person_top1_difference":0.0,"left_before_right":{"generation_top1":0.1736111111111111,"generation_top5":0.6319444444444444,"mean_anonymity_set":1.8055555555555556,"mean_generation_rank":8.0625,"person_top1":0.4375,"samples":144},"right_before_left":{"generation_top1":0.1736111111111111,"generation_top5":0.6319444444444444,"mean_anonymity_set":1.8055555555555556,"mean_generation_rank":8.0625,"person_top1":0.4375,"samples":144},"signed_generation_top1_difference":0.0,"signed_person_top1_difference":0.0},"feature_divergence":{"lexical":0.0,"semantic":0.0,"style":1.0639637319324417e-16},"final_metadata_identical":true,"largest_changed_channel":"lexical","left_before_right":["paraphrase","model_edit"],"right_before_left":["model_edit","paraphrase"],"single_channel_person_top1_difference":{"lexical":0.0,"semantic":0.0,"style":0.0,"time":0.0,"watermark":0.0},"text_difference_fraction":0.0},
+      "summarize|translate": {"combined":{"absolute_person_top1_difference":0.0,"left_before_right":{"generation_top1":0.09722222222222222,"generation_top5":0.4513888888888889,"mean_anonymity_set":2.048611111111111,"mean_generation_rank":11.006944444444445,"person_top1":0.2986111111111111,"samples":144},"right_before_left":{"generation_top1":0.09722222222222222,"generation_top5":0.4513888888888889,"mean_anonymity_set":2.048611111111111,"mean_generation_rank":11.006944444444445,"person_top1":0.2986111111111111,"samples":144},"signed_generation_top1_difference":0.0,"signed_person_top1_difference":0.0},"feature_divergence":{"lexical":0.0,"semantic":0.0,"style":7.401486830834377e-17},"final_metadata_identical":true,"largest_changed_channel":"lexical","left_before_right":["summarize","translate"],"right_before_left":["translate","summarize"],"single_channel_person_top1_difference":{"lexical":0.0,"semantic":0.0,"style":0.0,"time":0.0,"watermark":0.0},"text_difference_fraction":0.0},
+      "summarize|model_edit": {"combined":{"absolute_person_top1_difference":0.2361111111111111,"left_before_right":{"generation_top1":0.11805555555555555,"generation_top5":0.5208333333333334,"mean_anonymity_set":1.8333333333333333,"mean_generation_rank":10.215277777777779,"person_top1":0.3402777777777778,"samples":144},"right_before_left":{"generation_top1":0.2569444444444444,"generation_top5":0.75,"mean_anonymity_set":1.6527777777777777,"mean_generation_rank":5.166666666666667,"person_top1":0.5763888888888888,"samples":144},"signed_generation_top1_difference":-0.1388888888888889,"signed_person_top1_difference":-0.2361111111111111},"feature_divergence":{"lexical":0.33705056342522033,"semantic":0.01566041626406384,"style":0.19370690273083896},"final_metadata_identical":true,"largest_changed_channel":"lexical","left_before_right":["summarize","model_edit"],"right_before_left":["model_edit","summarize"],"single_channel_person_top1_difference":{"lexical":-0.08333333333333331,"semantic":-0.048611111111111105,"style":0.0,"time":0.0,"watermark":0.0},"text_difference_fraction":1.0},
+      "translate|model_edit": {"combined":{"absolute_person_top1_difference":0.0,"left_before_right":{"generation_top1":0.1736111111111111,"generation_top5":0.6319444444444444,"mean_anonymity_set":1.8055555555555556,"mean_generation_rank":8.0625,"person_top1":0.4375,"samples":144},"right_before_left":{"generation_top1":0.1736111111111111,"generation_top5":0.6319444444444444,"mean_anonymity_set":1.8055555555555556,"mean_generation_rank":8.0625,"person_top1":0.4375,"samples":144},"signed_generation_top1_difference":0.0,"signed_person_top1_difference":0.0},"feature_divergence":{"lexical":0.0,"semantic":0.0,"style":1.2027416100105862e-16},"final_metadata_identical":true,"largest_changed_channel":"lexical","left_before_right":["translate","model_edit"],"right_before_left":["model_edit","translate"],"single_channel_person_top1_difference":{"lexical":0.0,"semantic":0.0,"style":0.0,"time":0.0,"watermark":0.0},"text_difference_fraction":0.0}
+    }
+  },
+  "parameters": {"artifact_seed":7000,"generations":144,"persons":12,"seed":41,"transforms":["paraphrase","summarize","translate","model_edit"]},
+  "predecessor_experiment_commit": "43d4b97a1c9b53a73de079ac166134fba663f494",
+  "research_scope": "synthetic-only",
+  "schema": "altru.dev/noncommutativity-mechanism/0.6",
+  "standing_rules": ["Privacy transformation != privacy evidence","Failed re-identification != proven anonymity","Synthetic benchmark mechanism != deployed-provider mechanism","Predictor failure is a valid result"]
+}
