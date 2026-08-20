@@ -1,0 +1,83 @@
+{
+  "schema": "altru.dev/compositional-privacy-experiment-lineage/0.1",
+  "program": "ai-watermarking-compositional-privacy",
+  "published_research_object": {
+    "id": "zenodo:22004863",
+    "url": "https://zenodo.org/records/22004863",
+    "version": "1.0",
+    "role": "immutable-published-research-object"
+  },
+  "active_research_program": {
+    "repository": "https://github.com/altrudev/ai-watermarking-compositional-privacy",
+    "audited_head": "43d4b97a1c9b53a73de079ac166134fba663f494",
+    "role": "evolving-experimental-research-program"
+  },
+  "experiments": [
+    {
+      "id": "v0.1",
+      "name": "abstract-unlinkability-lab",
+      "canonical_commit": "808f070c3896ce60a8a309054a6149fbdab0ad65",
+      "maturity": "experimental-synthetic-benchmark",
+      "result": "research/RESULTS-v0.1.md",
+      "report": "research/reference-report-v0.1.json",
+      "claim_register": "research/CLAIM_REGISTER.md",
+      "test_plan": "research/TEST_PLAN.md",
+      "validation": null,
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.2",
+      "name": "actual-synthetic-text-unlinkability",
+      "canonical_commit": "e9d84a5558824644f3f1b03720e43cca0da7c670",
+      "maturity": "experimental-synthetic-text-benchmark",
+      "result": "research/RESULTS-v0.2.md",
+      "report": "research/reference-report-v0.2.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.2.md",
+      "test_plan": "research/TEST_PLAN-v0.2.md",
+      "validation": "research/VALIDATION-v0.2.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.3",
+      "name": "transformation-chain-attribution-persistence",
+      "canonical_commit": "c560299e9cbd5c4c34dcbf146cc65bc0e497265d",
+      "maturity": "experimental-synthetic-text-benchmark",
+      "result": "research/RESULTS-v0.3.md",
+      "report": "research/reference-report-v0.3.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.3.md",
+      "test_plan": "research/TEST_PLAN-v0.3.md",
+      "validation": "research/VALIDATION-v0.3.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.4",
+      "name": "transformation-path-dependence",
+      "canonical_commit": "b88eb87eb4a1d814c177e61d2147daed0a95e6d0",
+      "maturity": "experimental-synthetic-path-order-benchmark",
+      "result": "research/RESULTS-v0.4.md",
+      "report": "research/reference-report-v0.4.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.4.md",
+      "test_plan": "research/TEST_PLAN-v0.4.md",
+      "validation": "research/VALIDATION-v0.4.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.5",
+      "name": "path-dependence-robustness",
+      "canonical_commit": "43d4b97a1c9b53a73de079ac166134fba663f494",
+      "maturity": "experimental-synthetic-robustness-benchmark",
+      "result": "research/RESULTS-v0.5.md",
+      "report": "research/reference-report-v0.5.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.5.md",
+      "test_plan": "research/TEST_PLAN-v0.5.md",
+      "validation": "research/VALIDATION-v0.5.md",
+      "evaluation_semantics": "closed-set-forced-choice",
+      "claim": "ROBUST_IN_DECLARED_MATRIX"
+    }
+  ],
+  "audit": {
+    "record": "research/DDC_AUDIT-v0.1-v0.5.md",
+    "rule": "Published research object != active research program != experiment != experimental result != validated invariant",
+    "historical_records_rewritten": false
+  }
+}
