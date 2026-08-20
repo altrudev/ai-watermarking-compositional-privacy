@@ -38,8 +38,18 @@ def _features(text: str):
     return lexical_vector(text), semantic_vector(text), style_vector(text)
 
 
+def _artifact_key(artifact: Artifact):
+    return (
+        artifact.target_generation_id,
+        artifact.text,
+        artifact.published_minute,
+        artifact.provider_hint,
+        artifact.watermark_family,
+    )
+
+
 class CachedEvaluator:
-    """Exact v0.3 scoring semantics with candidate features cached once."""
+    """Exact v0.3 scoring semantics with reusable component-score caching."""
 
     def __init__(self, population):
         self.population = list(population)
@@ -47,55 +57,81 @@ class CachedEvaluator:
         self.candidate_features = {
             row.generation_id: _features(row.text) for row in self.population
         }
+        self._feature_cache = {}
+        self._component_cache = {}
+        self._evaluation_cache = {}
+
+    def _artifact_features(self, text: str):
+        cached = self._feature_cache.get(text)
+        if cached is None:
+            cached = _features(text)
+            self._feature_cache[text] = cached
+        return cached
+
+    def _components(self, artifact: Artifact):
+        key = _artifact_key(artifact)
+        cached = self._component_cache.get(key)
+        if cached is not None:
+            return cached
+
+        artifact_features = self._artifact_features(artifact.text)
+        rows = []
+        for candidate in self.population:
+            candidate_features = self.candidate_features[candidate.generation_id]
+            lexical = (cosine(artifact_features[0], candidate_features[0]) + 1) / 2
+            semantic = (cosine(artifact_features[1], candidate_features[1]) + 1) / 2
+            style = (cosine(artifact_features[2], candidate_features[2]) + 1) / 2
+            watermark = float(
+                artifact.watermark_family is not None
+                and artifact.watermark_family == candidate.watermark_family
+            )
+            provider = float(
+                artifact.provider_hint is not None
+                and artifact.provider_hint == candidate.provider
+            )
+            delta = artifact.published_minute - candidate.created_minute
+            timing = exp(-delta / 50) if delta >= 0 else 0.0
+            rows.append((lexical, semantic, style, watermark, provider, timing))
+        cached = tuple(rows)
+        self._component_cache[key] = cached
+        return cached
 
     def evaluate(self, artifacts: Sequence[Artifact], weights=WEIGHTS) -> Metrics:
+        artifact_keys = tuple(_artifact_key(artifact) for artifact in artifacts)
+        cache_key = (artifact_keys, tuple(weights))
+        cached = self._evaluation_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         total = sum(weights)
-        normalized = [value / total for value in weights]
+        normalized = tuple(value / total for value in weights)
         person_top1 = generation_top1 = generation_top5 = 0
         ranks = []
         anonymity_sets = []
+
         for artifact in artifacts:
             target = self.by_generation[artifact.target_generation_id]
-            artifact_features = _features(artifact.text)
-            ranked = []
-            for candidate in self.population:
-                candidate_features = self.candidate_features[candidate.generation_id]
-                lexical = (cosine(artifact_features[0], candidate_features[0]) + 1) / 2
-                semantic = (cosine(artifact_features[1], candidate_features[1]) + 1) / 2
-                style = (cosine(artifact_features[2], candidate_features[2]) + 1) / 2
-                watermark = float(
-                    artifact.watermark_family is not None
-                    and artifact.watermark_family == candidate.watermark_family
-                )
-                provider = float(
-                    artifact.provider_hint is not None
-                    and artifact.provider_hint == candidate.provider
-                )
-                delta = artifact.published_minute - candidate.created_minute
-                timing = exp(-delta / 50) if delta >= 0 else 0.0
-                score = sum(
-                    value * weight
-                    for value, weight in zip(
-                        (lexical, semantic, style, watermark, provider, timing),
-                        normalized,
-                    )
-                )
-                ranked.append((candidate, score))
-            ranked.sort(key=lambda item: (-item[1], item[0].generation_id))
+            component_rows = self._components(artifact)
+            scored = []
+            for candidate, components in zip(self.population, component_rows):
+                score = sum(value * weight for value, weight in zip(components, normalized))
+                scored.append((candidate, score))
+            scored.sort(key=lambda item: (-item[1], item[0].generation_id))
             position = next(
                 index
-                for index, (candidate, _score) in enumerate(ranked)
+                for index, (candidate, _score) in enumerate(scored)
                 if candidate.generation_id == target.generation_id
             )
-            predicted = ranked[0][0]
+            predicted = scored[0][0]
             person_top1 += predicted.person_id == target.person_id
             generation_top1 += position == 0
             generation_top5 += position < 5
             ranks.append(position + 1)
-            best = ranked[0][1]
-            anonymity_sets.append(sum(score >= best - 0.02 for _candidate, score in ranked))
+            best = scored[0][1]
+            anonymity_sets.append(sum(score >= best - 0.02 for _candidate, score in scored))
+
         count = len(artifacts)
-        return Metrics(
+        result = Metrics(
             count,
             person_top1 / count,
             generation_top1 / count,
@@ -103,6 +139,8 @@ class CachedEvaluator:
             mean(ranks),
             mean(anonymity_sets),
         )
+        self._evaluation_cache[cache_key] = result
+        return result
 
 
 def _apply(artifacts: Sequence[Artifact], path: Sequence[str]) -> list[Artifact]:
@@ -207,9 +245,10 @@ def full_path_prediction(evaluator: CachedEvaluator, original: Sequence[Artifact
         final = _apply(original, path)
         observed = evaluator.evaluate(final, WEIGHTS).person_top1
         score = 0.0
+        positions = {name: index for index, name in enumerate(path)}
         for left, right in ordered_pairs:
             effect = directional_effects[_pair_key(left, right)]
-            score += effect if path.index(left) < path.index(right) else -effect
+            score += effect if positions[left] < positions[right] else -effect
         rows.append({"path": list(path), "pairwise_score": score, "observed_person_top1": observed})
     correlation = _pearson(
         [row["pairwise_score"] for row in rows],
