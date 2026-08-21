@@ -13,6 +13,15 @@ from lab.transformation_chain_lab import (
     style_vector,
 )
 
+# The historical SINGLE_SIGNALS helper predates provider-only reporting and
+# contains lexical/semantic/style/watermark/time. v0.7's frozen scorer has six
+# declared channels, so diagnostics add provider explicitly without changing
+# any scoring, policy, transformation, partition, or claim threshold.
+DIAGNOSTIC_SIGNALS = {
+    **SINGLE_SIGNALS,
+    "provider": (0, 0, 0, 0, 1, 0),
+}
+
 
 def _metadata_signature(artifacts):
     return tuple(
@@ -64,16 +73,18 @@ def scenario_pairwise_diagnostics(scenario_name: str) -> dict:
                 }
 
             single_channel_deltas = {}
-            for channel_name, weights in SINGLE_SIGNALS.items():
+            for channel_name, weights in DIAGNOSTIC_SIGNALS.items():
                 left_metrics = evaluator.evaluate(left_right, weights)
                 right_metrics = evaluator.evaluate(right_left, weights)
                 single_channel_deltas[channel_name] = (
                     left_metrics.person_top1 - right_metrics.person_top1
                 )
 
-            largest_changed_channel = max(
-                single_channel_deltas,
-                key=lambda name: abs(single_channel_deltas[name]),
+            max_delta = max(abs(value) for value in single_channel_deltas.values())
+            largest_changed_channels = sorted(
+                name
+                for name, value in single_channel_deltas.items()
+                if abs(value) == max_delta
             )
 
             pair_key = f"{left_name}|{right_name}"
@@ -92,7 +103,8 @@ def scenario_pairwise_diagnostics(scenario_name: str) -> dict:
                 },
                 "policy_order_effects": policy_deltas,
                 "single_channel_person_top1_difference": single_channel_deltas,
-                "largest_changed_channel": largest_changed_channel,
+                "largest_changed_channels": largest_changed_channels,
+                "largest_absolute_channel_delta": max_delta,
             }
 
         family_rows[family_name] = {
