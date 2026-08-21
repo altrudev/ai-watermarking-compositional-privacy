@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from itertools import combinations
 from statistics import mean
 import json
@@ -48,6 +49,52 @@ def _text_difference_fraction(left, right) -> float:
     if len(left) != len(right) or not left:
         raise ValueError("Pairwise diagnostics require non-empty equal artifact sets")
     return mean(float(a.text != b.text) for a, b in zip(left, right))
+
+
+def scenario_commuting_control_diagnostics(scenario_name: str) -> dict:
+    if scenario_name not in SCENARIOS:
+        raise ValueError(f"Unknown scenario: {scenario_name}")
+
+    _population, _calibration, holdout, evaluator = prepare_scenario(scenario_name)
+    lower_then_space = [
+        replace(row, text=" ".join(row.text.lower().split()))
+        for row in holdout
+    ]
+    space_then_lower = [
+        replace(row, text=" ".join(row.text.split()).lower())
+        for row in holdout
+    ]
+    final_text_identical = all(
+        left.text == right.text
+        for left, right in zip(lower_then_space, space_then_lower)
+    )
+    final_metadata_identical = (
+        _metadata_signature(lower_then_space) == _metadata_signature(space_then_lower)
+    )
+    policies = {}
+    for policy_name, weights in POLICIES.items():
+        left_metrics = evaluator.evaluate(lower_then_space, weights)
+        right_metrics = evaluator.evaluate(space_then_lower, weights)
+        person_delta = left_metrics.person_top1 - right_metrics.person_top1
+        generation_delta = left_metrics.generation_top1 - right_metrics.generation_top1
+        policies[policy_name] = {
+            "person_top1_difference": person_delta,
+            "generation_top1_difference": generation_delta,
+            "control_pass": (
+                final_text_identical
+                and final_metadata_identical
+                and person_delta == 0
+                and generation_delta == 0
+            ),
+        }
+    return {
+        "scenario": scenario_name,
+        "holdout_samples": len(holdout),
+        "final_text_identical": final_text_identical,
+        "final_metadata_identical": final_metadata_identical,
+        "policies": policies,
+        "all_policies_pass": all(row["control_pass"] for row in policies.values()),
+    }
 
 
 def scenario_pairwise_diagnostics(scenario_name: str) -> dict:
@@ -128,6 +175,10 @@ def run_all_pairwise_diagnostics() -> dict:
         "schema": "altru.dev/cross-family-replication-pairwise-diagnostics-set/0.7",
         "research_scope": "synthetic-only",
         "protocol_commit": "786ebb3d097d999e15f72cbfce536e59566206a1",
+        "controls": {
+            scenario_name: scenario_commuting_control_diagnostics(scenario_name)
+            for scenario_name in SCENARIOS
+        },
         "scenarios": {
             scenario_name: scenario_pairwise_diagnostics(scenario_name)
             for scenario_name in SCENARIOS
