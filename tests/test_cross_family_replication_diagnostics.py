@@ -1,8 +1,10 @@
 import unittest
 
-from lab.cross_family_replication_diagnostics import scenario_pairwise_diagnostics
+from lab.cross_family_replication_diagnostics import (
+    DIAGNOSTIC_SIGNALS,
+    scenario_pairwise_diagnostics,
+)
 from lab.cross_family_replication_lab import FAMILIES, POLICIES
-from lab.transformation_chain_lab import SINGLE_SIGNALS
 
 
 class CrossFamilyReplicationDiagnosticsTests(unittest.TestCase):
@@ -26,6 +28,10 @@ class CrossFamilyReplicationDiagnosticsTests(unittest.TestCase):
             self.assertEqual(len(row["pairs"]), 6)
 
     def test_pairwise_evidence_contains_predeclared_t2_fields(self):
+        self.assertEqual(
+            set(DIAGNOSTIC_SIGNALS),
+            {"lexical", "semantic", "style", "watermark", "provider", "time"},
+        )
         for family in self.result["families"].values():
             for row in family["pairs"].values():
                 self.assertIn("final_text_difference_fraction", row)
@@ -37,12 +43,15 @@ class CrossFamilyReplicationDiagnosticsTests(unittest.TestCase):
                 self.assertEqual(set(row["policy_order_effects"]), set(POLICIES))
                 self.assertEqual(
                     set(row["single_channel_person_top1_difference"]),
-                    set(SINGLE_SIGNALS),
+                    set(DIAGNOSTIC_SIGNALS),
                 )
-                self.assertIn(
-                    row["largest_changed_channel"],
-                    row["single_channel_person_top1_difference"],
-                )
+                self.assertTrue(row["largest_changed_channels"])
+                for channel in row["largest_changed_channels"]:
+                    self.assertIn(channel, row["single_channel_person_top1_difference"])
+                    self.assertEqual(
+                        abs(row["single_channel_person_top1_difference"][channel]),
+                        row["largest_absolute_channel_delta"],
+                    )
 
     def test_transforms_do_not_create_metadata_order_difference(self):
         for family in self.result["families"].values():
