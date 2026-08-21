@@ -2,6 +2,7 @@ import unittest
 
 from lab.cross_family_replication_diagnostics import (
     DIAGNOSTIC_SIGNALS,
+    scenario_commuting_control_diagnostics,
     scenario_pairwise_diagnostics,
 )
 from lab.cross_family_replication_lab import FAMILIES, POLICIES
@@ -11,6 +12,7 @@ class CrossFamilyReplicationDiagnosticsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.result = scenario_pairwise_diagnostics("S1")
+        cls.control = scenario_commuting_control_diagnostics("S1")
 
     def test_protocol_identity_and_scope(self):
         self.assertEqual(
@@ -64,6 +66,16 @@ class CrossFamilyReplicationDiagnosticsTests(unittest.TestCase):
                 for value in row["feature_divergence"].values():
                     self.assertGreaterEqual(value, 0.0)
                     self.assertLessEqual(value, 2.0)
+
+    def test_commuting_control_records_text_metadata_and_policy_equality(self):
+        self.assertTrue(self.control["final_text_identical"])
+        self.assertTrue(self.control["final_metadata_identical"])
+        self.assertEqual(set(self.control["policies"]), set(POLICIES))
+        self.assertTrue(self.control["all_policies_pass"])
+        for row in self.control["policies"].values():
+            self.assertEqual(row["person_top1_difference"], 0)
+            self.assertEqual(row["generation_top1_difference"], 0)
+            self.assertTrue(row["control_pass"])
 
 
 if __name__ == "__main__":
