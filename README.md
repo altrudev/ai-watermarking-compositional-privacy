@@ -12,12 +12,14 @@
 
 ## Current repository research state
 
-**Completed experimental lineage:** v0.1 through v0.7  
-**Current governed program:** v0.8 open-set / false-attribution study  
-**v0.8 status:** protocol audited; implementation authorized; canonical reference run **not yet authorized**  
+**Completed experimental lineage:** v0.1 through v0.8  
+**Latest canonical experiment:** v0.8 open-set / false-attribution study  
+**v0.8 status:** completed, deterministically reproduced, evidence-retained, and DDC result-audited  
+**v0.8 classification:** **`CONTEXT_DEPENDENT_OPEN_SET_CONTROL`**  
+**Canonical v0.8 commit:** `7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e`  
 **Next candidate direction:** v0.9 attribution-boundary / key-architecture study, recorded as a candidate only and **not implementation-authorized**
 
-The public README previously stopped at v0.5 even though the repository had progressed through v0.7 results and a fully audited v0.8 pre-execution protocol. This README now reflects the actual governed state without rewriting historical result files.
+The repository records the full governed experimental progression without rewriting historical result files. v0.8 is now closed as a synthetic experimental result; the v0.9 candidate remains question-scope only.
 
 ## Abstract
 
@@ -29,7 +31,7 @@ A provenance signal does not need to **contain** personal identity to participat
 
 The paper introduces **provenance-mediated identity linkage** as a privacy threat-model category and proposes a **Compositional Privacy Invariant** for AI provenance systems.
 
-The repository then attacks its own proposition through synthetic attribution/unlinkability experiments, transformation-chain tests, path-dependence analysis, robustness tests, mechanism analysis, replication/falsification, and an open-set false-attribution program.
+The repository then attacks its own proposition through synthetic attribution/unlinkability experiments, transformation-chain tests, path-dependence analysis, robustness tests, mechanism analysis, replication/falsification, and open-set false-attribution testing.
 
 ## Core distinctions
 
@@ -40,6 +42,8 @@ The repository then attacks its own proposition through synthetic attribution/un
 - **Component Privacy != Compositional Privacy**
 - **Watermark signal != attribution evidence**
 - **Candidate reduction != evidence creation**
+- **Confidence != identity proof**
+- **Calibration success != transferable safety**
 - **Key secrecy != architectural secrecy**
 - **Detector behavior != internal watermark architecture**
 - **Provider assertion != independently verified privacy property**
@@ -56,7 +60,7 @@ For AI provenance specifically:
 
 ## Research method
 
-The repository now documents the method explicitly in [`research/RESEARCH_METHOD.md`](research/RESEARCH_METHOD.md).
+The repository documents the method explicitly in [`research/RESEARCH_METHOD.md`](research/RESEARCH_METHOD.md).
 
 The working sequence is:
 
@@ -178,7 +182,7 @@ The broader mechanism claim therefore failed its predeclared replication gate. v
 
 > **Replication failure != permission to tune the protocol after observing results.**
 
-## v0.8 — open-set / false-attribution program
+## v0.8 — open-set / false-attribution study
 
 v0.8 changes the task from closed-set best-match attribution to an open-set question:
 
@@ -188,16 +192,28 @@ The protocol separately measures known correct acceptance, known wrong acceptanc
 
 The full DDC pre-execution audit found and repaired ambiguities involving calibration/holdout partitioning, single-candidate confidence, malformed provenance handling, candidate-filter evidence, transfer usefulness, aggregate-label precedence, repeated measures, calibration provenance, and exact protocol lineage.
 
-**Current status:**
+**Canonical result:**
 
-- base protocol: frozen;
-- Amendment 1: frozen;
-- Claim Amendment 1: frozen;
-- full protocol audit: **PASS for implementation**;
-- implementation: **not yet canonical in the repository**;
-- canonical reference run: **not authorized yet**.
+- canonical commit: `7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e`;
+- classification: **`CONTEXT_DEPENDENT_OPEN_SET_CONTROL`**;
+- core matrix: **108 cells**;
+- calibration-feasible: **13 / 108**;
+- calibration-infeasible: **95 / 108**;
+- S3 feasible cells: **0 / 36**;
+- transformed-state feasible cells: **0 / 72**;
+- threshold transfer: **not supported** in either declared transfer pair;
+- controls C1-C7: **PASS**;
+- historical scorer parity: **PASS**;
+- deterministic complete replay: **PASS**;
+- complete reference SHA-256: `8e0d60322528d44eccf42801caaf5af24e48848d6b75e875b23a59f0a9feca43`.
 
-The governed next transition is to implement the exact v0.8 candidate and tests, audit that implementation, and only then authorize a canonical reference run.
+Among the 13 evaluated cells, median UFIR was approximately **1.04%**, median KCAR **75%**, and median KWAR **0%**. False-attribution events nevertheless occurred in the declared synthetic benchmark and were retained as repeated measures. The frozen matrix-wide `FALSE_ATTRIBUTION_RISK_OBSERVED` label did not fire; that must not be read as a claim of "no risk" or "safe."
+
+The cross-population threshold-transfer tests degraded sharply: S1 -> S2 produced median destination UFIR **21.875%** and S2 -> S3 **36.81%** among evaluated transfers. This supports the distinction:
+
+> **Calibration success != transferable safety.**
+
+v0.8 is closed as a synthetic experiment. It does not establish real-person attribution prevalence, provider-specific watermark behavior, anonymity guarantees, or identity-resolution authority.
 
 ## v0.9 candidate — attribution boundary / key architecture
 
@@ -208,7 +224,7 @@ A public technical discussion on 2026-08-22 exposed two useful challenges:
 
 These questions are recorded in [`research/ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md`](research/ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md).
 
-This is **not a v0.9 protocol** and does not authorize implementation. v0.8 must be closed or explicitly superseded through a separate governed transition first.
+This is **not a v0.9 protocol** and does not authorize implementation. A separate Root Human Authority instruction and a new predeclared, DDC-audited protocol are required before any v0.9 execution.
 
 ## Running the completed synthetic labs
 
@@ -218,7 +234,7 @@ The existing labs use the Python standard library.
 python -m unittest discover -s tests -v
 ```
 
-Individual completed programs can also be run through their module entry points where defined. The v0.8 reference experiment must not be treated as runnable/canonical until its implementation gate is satisfied.
+Individual completed programs can also be run through their module entry points where defined. v0.8 is part of the canonical completed synthetic lineage.
 
 ## Research files
 
@@ -287,13 +303,26 @@ Individual completed programs can also be run through their module entry points 
 - [`research/holdout-matrix-v0.7.json`](research/holdout-matrix-v0.7.json)
 - [`research/transfer-matrix-v0.7.json`](research/transfer-matrix-v0.7.json)
 
-### v0.8 — pre-execution governed state
+### v0.8 — completed governed experiment
+- [`lab/open_set_attribution_v08.py`](lab/open_set_attribution_v08.py)
+- [`lab/open_set_reference_v08.py`](lab/open_set_reference_v08.py)
+- [`lab/open_set_raw_evidence_v08.py`](lab/open_set_raw_evidence_v08.py)
+- [`tests/test_open_set_attribution_v08.py`](tests/test_open_set_attribution_v08.py)
+- [`tests/test_open_set_reference_v08.py`](tests/test_open_set_reference_v08.py)
+- [`tests/test_open_set_raw_evidence_v08.py`](tests/test_open_set_raw_evidence_v08.py)
 - [`research/TEST_PLAN-v0.8.md`](research/TEST_PLAN-v0.8.md)
 - [`research/TEST_PLAN-v0.8-AMENDMENT-1.md`](research/TEST_PLAN-v0.8-AMENDMENT-1.md)
 - [`research/CLAIM_REGISTER-v0.8-PREDECLARED.md`](research/CLAIM_REGISTER-v0.8-PREDECLARED.md)
 - [`research/CLAIM_REGISTER-v0.8-AMENDMENT-1.md`](research/CLAIM_REGISTER-v0.8-AMENDMENT-1.md)
+- [`research/CLAIM_REGISTER-v0.8.md`](research/CLAIM_REGISTER-v0.8.md)
+- [`research/IMPLEMENTATION_SPEC-v0.8.md`](research/IMPLEMENTATION_SPEC-v0.8.md)
+- [`research/RESULTS-v0.8.md`](research/RESULTS-v0.8.md)
+- [`research/VALIDATION-v0.8.md`](research/VALIDATION-v0.8.md)
+- [`research/RAW_EVIDENCE-v0.8.json`](research/RAW_EVIDENCE-v0.8.json)
 - [`research/DDC_AUDIT-v0.8-PROTOCOL.md`](research/DDC_AUDIT-v0.8-PROTOCOL.md)
 - [`research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md)
+- [`research/DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md`](research/DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md)
+- [`research/DDC_RESULT_AUDIT-v0.8-FINAL.md`](research/DDC_RESULT_AUDIT-v0.8-FINAL.md)
 - [`docs/programs/OPEN_SET_FALSE_ATTRIBUTION-v0.8.json`](docs/programs/OPEN_SET_FALSE_ATTRIBUTION-v0.8.json)
 
 ### Research governance and next questions
@@ -314,7 +343,7 @@ The published v1.0 artifacts remain immutable historical records. New research q
 
 Rukhaylo, Valentyn. *From Model Provenance to Human Attribution: The Compositional Privacy Risk of AI Text Watermarking.* Altru.dev Technical Research Note, Version 1.0, August 18, 2026.
 
-For the continued experimental program through v0.7, see the separate *Beyond Model Provenance* publication record in `publications/`.
+For the continued experimental program through v0.7, see the separate *Beyond Model Provenance* publication record in `publications/`. v0.8 remains repository experimental evidence until separately published as a formal research object.
 
 ## Research provenance
 

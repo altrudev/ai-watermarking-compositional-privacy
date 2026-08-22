@@ -1,42 +1,55 @@
 {
   "schema": "altru.dev/governed-open-set-research/0.8",
   "program_id": "open-set-false-attribution-v0.8",
-  "status": "implementation_authorized_pre_reference",
+  "status": "completed",
   "authority": "Root Human Authority: Ok, perfect let's do it",
   "research_scope": "synthetic-only",
+  "canonical_experiment_commit": "7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e",
   "governing_protocol": {
     "base_protocol_commit": "7ed99ac13e39946b2853c2b4e4ddf4193728bce9",
     "amended_audited_head": "0a3f970beb200be97e04b9bc86b56584021e040a",
     "test_plan": "research/TEST_PLAN-v0.8.md",
     "amendment": "research/TEST_PLAN-v0.8-AMENDMENT-1.md",
-    "full_ddc_audit": "research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md"
+    "full_ddc_audit": "research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md",
+    "implementation_spec": "research/IMPLEMENTATION_SPEC-v0.8.md",
+    "implementation_audit": "research/DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md",
+    "result_audit": "research/DDC_RESULT_AUDIT-v0.8-FINAL.md"
   },
   "standing_rules": [
     "Detection != Provenance != Attribution != Identity Resolution != Authority",
     "Best match != sufficient match",
     "Candidate reduction != evidence creation",
     "Confidence != identity proof",
+    "Calibration success != transferable safety",
+    "Calibration infeasibility != anonymity",
     "Unknown rejection != anonymity",
     "Synthetic evidence != deployed-provider evidence",
     "Correlation != authorization",
     "Rules before results",
     "Negative and adverse evidence must be preserved"
   ],
-  "execution_gate": {
-    "implementation_allowed": true,
-    "canonical_reference_run_allowed": false,
-    "reference_run_requires": [
-      "exact implementation source review",
-      "focused tests PASS",
-      "cohort leakage controls PASS",
-      "historical scorer parity PASS",
-      "malformed provenance fail-closed PASS",
-      "single-candidate comparator control PASS",
-      "partition immutability PASS",
-      "deterministic implementation behavior PASS",
-      "exact tested bytes equal candidate bytes",
-      "pre-reference DDC implementation audit PASS"
-    ]
+  "verification": {
+    "focused_tests": "PASS",
+    "negative_controls_C1_C7": "PASS",
+    "historical_scorer_parity": "PASS",
+    "deterministic_complete_replay": "PASS",
+    "reference_bytes": 223416,
+    "reference_sha256": "8e0d60322528d44eccf42801caaf5af24e48848d6b75e875b23a59f0a9feca43",
+    "raw_record_count": 44928,
+    "raw_archives_second_pass_byte_identical": true,
+    "evidence_bundle_sha256": "baede290c793bc621a8a826449d1fc62bf372e26ac813612d05ac5041eba50fb"
+  },
+  "result": {
+    "classification": "CONTEXT_DEPENDENT_OPEN_SET_CONTROL",
+    "core_cells": 108,
+    "calibration_feasible_cells": 13,
+    "calibration_infeasible_cells": 95,
+    "scenario_S3_feasible_cells": 0,
+    "transformed_state_feasible_cells": 0,
+    "threshold_transfer_supported": false,
+    "false_attribution_cell_event_instances": 46,
+    "unique_unknown_people_in_false_events": 7,
+    "boundary": "Declared synthetic benchmark only; not a real-person attribution prevalence estimate, anonymity guarantee, deployed-provider result, or identity-resolution authority."
   },
   "hard_stops": [
     "real-person identity research",
@@ -49,5 +62,6 @@
     "post-result threshold tuning",
     "holdout leakage"
   ],
-  "next_transition": "implement v0.8 candidate and tests; do not generate canonical reference results until exact implementation audit passes"
+  "completion_rule": "v0.8 is closed at the canonical experiment commit above. Do not modify its frozen thresholds/results in place.",
+  "next_transition": "No v0.9 implementation is authorized by this record. A new Root Human Authority instruction and new predeclared protocol are required before any v0.9 execution."
 }
