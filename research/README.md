@@ -13,7 +13,7 @@ This directory contains the governed experimental lineage for the AI watermarkin
 | v0.5 | completed | robustness matrix for path dependence |
 | v0.6 | completed | strong local pairwise non-commutativity mechanism result |
 | v0.7 | completed | broader replication failed; local v0.6 result not promoted |
-| v0.8 | pre-execution | protocol audited; implementation allowed; canonical reference run not yet authorized |
+| v0.8 | completed | open-set / false-attribution control is context-dependent in the declared synthetic matrix |
 | v0.9 candidate | question scope only | no protocol, implementation, or result authorization |
 
 ## Current lineage
@@ -23,32 +23,47 @@ This directory contains the governed experimental lineage for the AI watermarkin
 
 Historical lineage files are snapshots, not mutable aliases.
 
+Canonical v0.8 experiment commit: `7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e`.
+
 ## Research governance
 
 - [`RESEARCH_METHOD.md`](RESEARCH_METHOD.md) — DDC-governed research process.
 - [`EXTERNAL_REVIEW_LOG.md`](EXTERNAL_REVIEW_LOG.md) — material external criticism recorded as hypothesis-generating input, not evidence.
 - [`DDC_AUDIT-v0.1-v0.5.md`](DDC_AUDIT-v0.1-v0.5.md) — historical program audit.
-- [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md) — full v0.8 pre-execution audit.
+- [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md) — full v0.8 pre-execution protocol audit.
+- [`DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md`](DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md) — exact implementation gate before reference execution.
+- [`DDC_RESULT_AUDIT-v0.8-FINAL.md`](DDC_RESULT_AUDIT-v0.8-FINAL.md) — final result-level DDC audit and clean-merge authorization.
 - [`DDC_LICENSE_TRANSITION-2026-08-22.md`](DDC_LICENSE_TRANSITION-2026-08-22.md) — governed licensing transition record.
 
-## Current governed program — v0.8
+## Completed governed program — v0.8
 
-The v0.8 open-set / false-attribution program is governed by:
+The v0.8 open-set / false-attribution program is governed and recorded by:
 
 - [`TEST_PLAN-v0.8.md`](TEST_PLAN-v0.8.md)
 - [`TEST_PLAN-v0.8-AMENDMENT-1.md`](TEST_PLAN-v0.8-AMENDMENT-1.md)
 - [`CLAIM_REGISTER-v0.8-PREDECLARED.md`](CLAIM_REGISTER-v0.8-PREDECLARED.md)
 - [`CLAIM_REGISTER-v0.8-AMENDMENT-1.md`](CLAIM_REGISTER-v0.8-AMENDMENT-1.md)
+- [`CLAIM_REGISTER-v0.8.md`](CLAIM_REGISTER-v0.8.md)
+- [`IMPLEMENTATION_SPEC-v0.8.md`](IMPLEMENTATION_SPEC-v0.8.md)
+- [`RESULTS-v0.8.md`](RESULTS-v0.8.md)
+- [`VALIDATION-v0.8.md`](VALIDATION-v0.8.md)
+- [`RAW_EVIDENCE-v0.8.json`](RAW_EVIDENCE-v0.8.json)
 - [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md)
+- [`DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md`](DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md)
+- [`DDC_RESULT_AUDIT-v0.8-FINAL.md`](DDC_RESULT_AUDIT-v0.8-FINAL.md)
 - [`../docs/programs/OPEN_SET_FALSE_ATTRIBUTION-v0.8.json`](../docs/programs/OPEN_SET_FALSE_ATTRIBUTION-v0.8.json)
 
-The protocol is implementation-authorized, but no canonical v0.8 implementation/reference result is present yet. The reference run remains blocked until the exact implementation candidate passes its own audit gate.
+Frozen v0.8 classification: **`CONTEXT_DEPENDENT_OPEN_SET_CONTROL`**.
+
+The declared 108-cell matrix produced 13 calibration-feasible cells and 95 calibration-infeasible cells. Both predeclared cross-population threshold-transfer pairs failed. The complete deterministic reference object reproduced byte-identically with SHA-256 `8e0d60322528d44eccf42801caaf5af24e48848d6b75e875b23a59f0a9feca43`.
+
+These findings remain synthetic experimental evidence. Calibration infeasibility is not anonymity, observed synthetic false attribution is not real-world accusation prevalence, and successful matching does not create identity-resolution authority.
 
 ## Next research question — not yet a protocol
 
-[`ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md`](ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md) records the next candidate questions around marginal provenance contribution, key scope, and architectural auditability.
+[`ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md`](ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md) records candidate questions around marginal provenance contribution, key scope, and architectural auditability.
 
-It does not modify v0.8 and does not authorize v0.9 implementation.
+v0.8 is closed. The v0.9 record remains question-scope only and does **not** authorize a v0.9 protocol, implementation, execution, real-person attribution research, or production identity-resolution capability.
 
 ## Licensing
 
