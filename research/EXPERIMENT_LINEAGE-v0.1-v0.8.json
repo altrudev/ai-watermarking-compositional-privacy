@@ -1,5 +1,5 @@
 {
-  "schema": "altru.dev/compositional-privacy-experiment-lineage/0.2",
+  "schema": "altru.dev/compositional-privacy-experiment-lineage/0.3",
   "program": "ai-watermarking-compositional-privacy",
   "generated_for_repository_state": "2026-08-22",
   "published_research_object": {
@@ -10,7 +10,7 @@
   },
   "active_research_program": {
     "repository": "https://github.com/altrudev/ai-watermarking-compositional-privacy",
-    "base_head_before_documentation_update": "459e49c296cf77c737098115468e35b52061c041",
+    "canonical_experimental_head": "7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e",
     "role": "evolving-experimental-research-program"
   },
   "experiments": [
@@ -101,23 +101,33 @@
       "evaluation_semantics": "closed-set-forced-choice",
       "classification": "MECHANISM_NOT_REPLICATED",
       "lineage_effect": "blocks promotion of the v0.6 local mechanism into a broad transferable property"
-    }
-  ],
-  "pre_execution_programs": [
+    },
     {
       "id": "v0.8",
       "name": "open-set-false-attribution",
-      "status": "implementation_authorized_pre_reference",
-      "governing_program_record": "docs/programs/OPEN_SET_FALSE_ATTRIBUTION-v0.8.json",
+      "canonical_commit": "7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e",
+      "maturity": "experimental-open-set-false-attribution-benchmark",
+      "result": "research/RESULTS-v0.8.md",
+      "claim_register": "research/CLAIM_REGISTER-v0.8.md",
       "test_plan": "research/TEST_PLAN-v0.8.md",
       "test_plan_amendment": "research/TEST_PLAN-v0.8-AMENDMENT-1.md",
-      "claim_register": "research/CLAIM_REGISTER-v0.8-PREDECLARED.md",
-      "claim_amendment": "research/CLAIM_REGISTER-v0.8-AMENDMENT-1.md",
-      "full_ddc_audit": "research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md",
-      "implementation_present": false,
-      "canonical_reference_run_authorized": false
+      "validation": "research/VALIDATION-v0.8.md",
+      "implementation_spec": "research/IMPLEMENTATION_SPEC-v0.8.md",
+      "implementation_audit": "research/DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md",
+      "result_audit": "research/DDC_RESULT_AUDIT-v0.8-FINAL.md",
+      "raw_evidence_manifest": "research/RAW_EVIDENCE-v0.8.json",
+      "evaluation_semantics": "open-set-abstention-with-unrepresented-synthetic-sources",
+      "classification": "CONTEXT_DEPENDENT_OPEN_SET_CONTROL",
+      "reference_sha256": "8e0d60322528d44eccf42801caaf5af24e48848d6b75e875b23a59f0a9feca43",
+      "evidence_bundle_sha256": "baede290c793bc621a8a826449d1fc62bf372e26ac813612d05ac5041eba50fb",
+      "core_cells": 108,
+      "calibration_feasible_cells": 13,
+      "calibration_infeasible_cells": 95,
+      "threshold_transfer_supported": false,
+      "lineage_effect": "shows that open-set control, calibration feasibility and threshold transfer are context-dependent in the declared synthetic benchmark; does not authorize real-person identity resolution"
     }
   ],
+  "pre_execution_programs": [],
   "candidate_research_queue": [
     {
       "id": "v0.9-candidate",
