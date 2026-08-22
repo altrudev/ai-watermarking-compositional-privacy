@@ -29,6 +29,7 @@ Historical lineage files are snapshots, not mutable aliases.
 - [`EXTERNAL_REVIEW_LOG.md`](EXTERNAL_REVIEW_LOG.md) — material external criticism recorded as hypothesis-generating input, not evidence.
 - [`DDC_AUDIT-v0.1-v0.5.md`](DDC_AUDIT-v0.1-v0.5.md) — historical program audit.
 - [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md) — full v0.8 pre-execution audit.
+- [`DDC_LICENSE_TRANSITION-2026-08-22.md`](DDC_LICENSE_TRANSITION-2026-08-22.md) — governed licensing transition record.
 
 ## Current governed program — v0.8
 
@@ -48,6 +49,12 @@ The protocol is implementation-authorized, but no canonical v0.8 implementation/
 [`ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md`](ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md) records the next candidate questions around marginal provenance contribution, key scope, and architectural auditability.
 
 It does not modify v0.8 and does not authorize v0.9 implementation.
+
+## Licensing
+
+Research prose in this directory is licensed under **CC BY-NC 4.0** unless a file states otherwise. Machine-readable synthetic evidence and result data in designated JSON / compressed-JSON files are licensed under **CC BY 4.0**.
+
+The authoritative scope map is [`../LICENSING.md`](../LICENSING.md). Licensing does not change the maturity, evidentiary meaning, or authority of any research result.
 
 ## Standing boundary
 

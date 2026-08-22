@@ -1,0 +1,15 @@
+Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
+
+Applies only to files and identified works designated CC BY-NC-ND 4.0 in ../LICENSING.md or by an explicit per-file notice.
+
+SPDX identifier: CC-BY-NC-ND-4.0
+Official license page: https://creativecommons.org/licenses/by-nc-nd/4.0/
+Official legal code: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+
+Copyright (c) 2026 Valentyn Rukhaylo / Altru.dev, except where a file identifies another rights holder.
+
+This repository notice incorporates the standard Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International license by reference. It does not modify the Creative Commons legal code.
+
+Repository-specific scope note: this license is used for designated formal publication text and identified canonical paper works. It permits sharing of the unadapted work for non-commercial purposes subject to attribution and the other license conditions. It does not grant permission to distribute modified versions as the licensed publication, imply endorsement, or use Altru.dev branding as a source identifier for derivative work.
+
+Where LICENSING.md identifies an earlier publication object that carried an All Rights Reserved notice, the copyright holder's later dated CC BY-NC-ND 4.0 grant in LICENSING.md supplies additional permissions for that identified work without altering the historical file bytes or checksum.

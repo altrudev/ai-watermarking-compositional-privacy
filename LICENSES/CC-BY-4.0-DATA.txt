@@ -1,0 +1,13 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Applies only to files designated CC BY 4.0 in ../LICENSING.md or by an explicit per-file notice.
+
+SPDX identifier: CC-BY-4.0
+Official license page: https://creativecommons.org/licenses/by/4.0/
+Official legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Copyright (c) 2026 Valentyn Rukhaylo / Altru.dev, except where a file identifies another rights holder.
+
+This repository notice incorporates the standard Creative Commons Attribution 4.0 International license by reference. It does not modify the Creative Commons legal code.
+
+Repository-specific scope note: this license is used for designated machine-readable synthetic research evidence, result data, citation metadata, and checksums. Licensing synthetic evidence does not assert that it describes real users, deployed providers, or real-world attribution rates.
