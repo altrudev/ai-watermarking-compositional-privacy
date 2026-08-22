@@ -1,0 +1,135 @@
+{
+  "schema": "altru.dev/compositional-privacy-experiment-lineage/0.2",
+  "program": "ai-watermarking-compositional-privacy",
+  "generated_for_repository_state": "2026-08-22",
+  "published_research_object": {
+    "id": "zenodo:22004863",
+    "url": "https://zenodo.org/records/22004863",
+    "version": "1.0",
+    "role": "immutable-published-research-object"
+  },
+  "active_research_program": {
+    "repository": "https://github.com/altrudev/ai-watermarking-compositional-privacy",
+    "base_head_before_documentation_update": "459e49c296cf77c737098115468e35b52061c041",
+    "role": "evolving-experimental-research-program"
+  },
+  "experiments": [
+    {
+      "id": "v0.1",
+      "name": "abstract-unlinkability-lab",
+      "canonical_commit": "808f070c3896ce60a8a309054a6149fbdab0ad65",
+      "maturity": "experimental-synthetic-benchmark",
+      "result": "research/RESULTS-v0.1.md",
+      "report": "research/reference-report-v0.1.json",
+      "claim_register": "research/CLAIM_REGISTER.md",
+      "test_plan": "research/TEST_PLAN.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.2",
+      "name": "actual-synthetic-text-unlinkability",
+      "canonical_commit": "e9d84a5558824644f3f1b03720e43cca0da7c670",
+      "maturity": "experimental-synthetic-text-benchmark",
+      "result": "research/RESULTS-v0.2.md",
+      "report": "research/reference-report-v0.2.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.2.md",
+      "test_plan": "research/TEST_PLAN-v0.2.md",
+      "validation": "research/VALIDATION-v0.2.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.3",
+      "name": "transformation-chain-attribution-persistence",
+      "canonical_commit": "c560299e9cbd5c4c34dcbf146cc65bc0e497265d",
+      "maturity": "experimental-synthetic-text-benchmark",
+      "result": "research/RESULTS-v0.3.md",
+      "report": "research/reference-report-v0.3.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.3.md",
+      "test_plan": "research/TEST_PLAN-v0.3.md",
+      "validation": "research/VALIDATION-v0.3.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.4",
+      "name": "transformation-path-dependence",
+      "canonical_commit": "b88eb87eb4a1d814c177e61d2147daed0a95e6d0",
+      "maturity": "experimental-synthetic-path-order-benchmark",
+      "result": "research/RESULTS-v0.4.md",
+      "report": "research/reference-report-v0.4.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.4.md",
+      "test_plan": "research/TEST_PLAN-v0.4.md",
+      "validation": "research/VALIDATION-v0.4.md",
+      "evaluation_semantics": "closed-set-forced-choice"
+    },
+    {
+      "id": "v0.5",
+      "name": "path-dependence-robustness",
+      "canonical_commit": "43d4b97a1c9b53a73de079ac166134fba663f494",
+      "maturity": "experimental-synthetic-robustness-benchmark",
+      "result": "research/RESULTS-v0.5.md",
+      "report": "research/reference-report-v0.5.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.5.md",
+      "test_plan": "research/TEST_PLAN-v0.5.md",
+      "validation": "research/VALIDATION-v0.5.md",
+      "evaluation_semantics": "closed-set-forced-choice",
+      "historical_local_classification": "ROBUST_IN_DECLARED_MATRIX"
+    },
+    {
+      "id": "v0.6",
+      "name": "pairwise-noncommutativity-mechanism",
+      "canonical_commit": "c29b40db9000d3e0a49c2c25fadab215d3084480",
+      "maturity": "experimental-local-mechanism-benchmark",
+      "result": "research/RESULTS-v0.6.md",
+      "report": "research/reference-report-v0.6.json",
+      "claim_register": "research/CLAIM_REGISTER-v0.6.md",
+      "test_plan": "research/TEST_PLAN-v0.6.md",
+      "validation": "research/VALIDATION-v0.6.md",
+      "evaluation_semantics": "closed-set-forced-choice",
+      "classification": "PAIRWISE_MECHANISM_PREDICTIVE_FOR_DECLARED_TEST"
+    },
+    {
+      "id": "v0.7",
+      "name": "cross-family-cross-policy-replication",
+      "canonical_commit": "43e9b1d591d0339dd5d94c74f8dd441873c5b20d",
+      "maturity": "experimental-replication-falsification-benchmark",
+      "result": "research/RESULTS-v0.7.md",
+      "claim_register": "research/CLAIM_REGISTER-v0.7.md",
+      "test_plan": "research/TEST_PLAN-v0.7.md",
+      "validation": "research/VALIDATION-v0.7.md",
+      "holdout_matrix": "research/holdout-matrix-v0.7.json",
+      "transfer_matrix": "research/transfer-matrix-v0.7.json",
+      "evaluation_semantics": "closed-set-forced-choice",
+      "classification": "MECHANISM_NOT_REPLICATED",
+      "lineage_effect": "blocks promotion of the v0.6 local mechanism into a broad transferable property"
+    }
+  ],
+  "pre_execution_programs": [
+    {
+      "id": "v0.8",
+      "name": "open-set-false-attribution",
+      "status": "implementation_authorized_pre_reference",
+      "governing_program_record": "docs/programs/OPEN_SET_FALSE_ATTRIBUTION-v0.8.json",
+      "test_plan": "research/TEST_PLAN-v0.8.md",
+      "test_plan_amendment": "research/TEST_PLAN-v0.8-AMENDMENT-1.md",
+      "claim_register": "research/CLAIM_REGISTER-v0.8-PREDECLARED.md",
+      "claim_amendment": "research/CLAIM_REGISTER-v0.8-AMENDMENT-1.md",
+      "full_ddc_audit": "research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md",
+      "implementation_present": false,
+      "canonical_reference_run_authorized": false
+    }
+  ],
+  "candidate_research_queue": [
+    {
+      "id": "v0.9-candidate",
+      "record": "research/ATTRIBUTION_BOUNDARY-v0.9-CANDIDATE.md",
+      "status": "question-scope-only",
+      "implementation_authorized": false
+    }
+  ],
+  "governance": {
+    "method": "research/RESEARCH_METHOD.md",
+    "external_review_log": "research/EXTERNAL_REVIEW_LOG.md",
+    "rule": "Published research object != active research program != experiment != experimental result != validated invariant",
+    "historical_records_rewritten": false
+  }
+}
