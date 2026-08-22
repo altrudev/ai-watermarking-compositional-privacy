@@ -6,7 +6,8 @@
 **Publication date:** August 20, 2026  
 **Version:** 1.0  
 **Document type:** Continued Research Paper / Experimental Privacy Analysis  
-**Copyright:** © 2026 Valentyn Rukhaylo. All rights reserved.
+**Copyright:** © 2026 Valentyn Rukhaylo  
+**License:** CC BY-NC-ND 4.0, effective August 22, 2026; see `../LICENSING.md`
 
 ## Relationship to the original paper
 
@@ -36,6 +37,14 @@ The paper discusses experimental results through the v0.7 program while preservi
 - correlation ≠ authorization.
 
 The v0.6 experiment produced a strong local pairwise non-commutativity result. The independently predeclared v0.7 experiment then failed to broadly replicate or transfer that mechanism across new transformation families, adversary policies, populations, seeds, and holdout conditions. The continuation paper treats that negative replication result as evidence that narrows the claim rather than as a reason to retune the experiment.
+
+## Licensing record
+
+As of August 22, 2026, the copyright holder offers this identified Version 1.0 work under the **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License (CC BY-NC-ND 4.0)**.
+
+An earlier copy or archived PDF may contain an All Rights Reserved notice. This later grant provides additional permissions for the identified work without modifying the historical bytes, title, version, or checksum. The authoritative repository scope record is `../LICENSING.md`.
+
+The license does not grant trademark rights, transfer authorship, imply endorsement, or authorize modified material to be represented as an official Altru.dev publication.
 
 ## Canonical PDF artifact
 
