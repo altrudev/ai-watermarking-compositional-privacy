@@ -1,0 +1,65 @@
+{
+  "schema": "altru.dev/open-set-false-attribution/raw-evidence-manifest/0.8",
+  "scope": "synthetic-only",
+  "status": "complete_deterministic_external_artifact",
+  "source_blobs": {
+    "historical_scorer": "30b9bde830eaa8f00771957d50ed78d21979fa49",
+    "core": "9f9d82e6a560c7fa62f0ccf716e63b8f0bccada0",
+    "core_tests": "044f77aee05eb253cc2d9b2d95613ed0387db372",
+    "reference_wrapper": "32eca12b0671841cb19de34c6a6a15f2a65736c0",
+    "reference_tests": "0e6341da4543c32c447758c43776c2173644acc4",
+    "raw_exporter": "f6152684dbe13274ce1a60b286acb10b26289d4c",
+    "raw_exporter_tests": "26cd2c3737e44a78a5405c29106d24983ecd53ae"
+  },
+  "complete_reference": {
+    "records_object_bytes": 223416,
+    "sha256": "8e0d60322528d44eccf42801caaf5af24e48848d6b75e875b23a59f0a9feca43",
+    "independent_runs": 2,
+    "byte_identical": true
+  },
+  "raw_scenarios": {
+    "S1": {
+      "records": 10368,
+      "json_bytes": 1228994,
+      "json_sha256": "557b41f07aefc6bbb71318dfe15249a8e8e854a8c00089c73cdb7a38c37c4335",
+      "gzip_bytes": 320558,
+      "gzip_sha256": "d5ade57c0db81e02f4c6830428fd953f3e322434034e30ed7c993957835b45e5",
+      "two_runs_byte_identical": true
+    },
+    "S2": {
+      "records": 13824,
+      "json_bytes": 1678380,
+      "json_sha256": "815e60e254f6126627caa90f568a3f14c7022860456a94246305e75376856ac0",
+      "gzip_bytes": 452195,
+      "gzip_sha256": "229940087f273bf75e1c880b77798b0dd6be010eb56610fa436ef4983d9717c8",
+      "two_runs_byte_identical": true
+    },
+    "S3": {
+      "records": 20736,
+      "json_bytes": 2527158,
+      "json_sha256": "acbdd76105db034954569f33360dd336c3d1027f586b2ef6b8d836bbb973057b",
+      "gzip_bytes": 682288,
+      "gzip_sha256": "94557ab84c117f01a252dbee649b679e36058e4c45ead37c74f494804d45f141",
+      "two_runs_byte_identical": true,
+      "execution_note": "Generated in deterministic state shards and assembled in the frozen state order because the monolithic process exceeded the local process window. Every state shard and the assembled artifact reproduced identically."
+    }
+  },
+  "total_raw_records": 44928,
+  "bundle": {
+    "filename": "AI-Watermarking-v0.8-Open-Set-Evidence-Bundle.zip",
+    "bytes": 1837642,
+    "sha256": "baede290c793bc621a8a826449d1fc62bf372e26ac813612d05ac5041eba50fb",
+    "storage": "Adobe Creative Cloud connected asset storage",
+    "asset_id": "urn:aaid:sc:US:e911e564-a62b-495b-9e1c-c457a8b9fb9e",
+    "git_binary_attachment": "unavailable_through_connected_github_interface",
+    "contents": [
+      "raw-S1-run1.json.gz",
+      "raw-S2-run1.json.gz",
+      "raw-S3-run1.json.gz",
+      "reference-run1-complete.json",
+      "reference-report-v0.8.json",
+      "v0.8-evidence-manifest.json"
+    ]
+  },
+  "boundary": "The archive contains deterministic synthetic experiment evidence only. Artifact retention does not authorize real-person attribution, provider access, or identity resolution."
+}
