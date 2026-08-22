@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use or discuss this continued research paper, please cite it as below."
+title: "Beyond Model Provenance: Continued Experimental Research on Watermark Linkability, Identification, and Compositional Privacy"
+type: article
+version: "1.0"
+date-released: 2026-08-20
+url: "https://github.com/altrudev/ai-watermarking-compositional-privacy"
+repository-code: "https://github.com/altrudev/ai-watermarking-compositional-privacy"
+authors:
+  - family-names: Rukhaylo
+    given-names: Valentyn
+    affiliation: Altru.dev
+keywords:
+  - AI text watermarking
+  - AI provenance
+  - attribution
+  - identity resolution
+  - compositional privacy
+  - provenance-mediated identity linkage
+  - unlinkability
+  - re-identification testing
+  - transformation lineage
+  - path dependence
+  - false attribution
+  - generative AI governance
+abstract: >-
+  This continued research paper extends the August 18, 2026 technical note From Model Provenance to Human Attribution by documenting the synthetic experimental program that followed. It examines how model-level provenance, lexical and semantic similarity, stylometry, timing, provider context, transformation history, and other weak signals can compose into attribution evidence; how privacy effects can change across transformation chains and orderings; and where proposed mechanisms fail to generalize. It preserves the negative v0.7 cross-family and cross-policy replication result and treats detection, provenance, attribution, identity resolution, and authority as separate system transitions.
+references:
+  - type: article
+    title: "From Model Provenance to Human Attribution: The Compositional Privacy Risk of AI Text Watermarking"
+    authors:
+      - family-names: Rukhaylo
+        given-names: Valentyn
+    year: 2026
+    date-released: 2026-08-18
+    url: "https://zenodo.org/records/22004863"
