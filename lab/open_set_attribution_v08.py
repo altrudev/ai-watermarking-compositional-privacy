@@ -119,6 +119,15 @@ def _dist(rs):
  d={}
  for r in rs:d[str(r["candidate_count"])]=d.get(str(r["candidate_count"]),0)+1
  return dict(sorted(d.items(),key=lambda x:int(x[0])))
+def _five(vals):
+ x=sorted(v for v in vals if v is not None)
+ if not x:return {"min":None,"p25":None,"median":None,"p75":None,"max":None}
+ def q(p):
+  if len(x)==1:return x[0]
+  z=(len(x)-1)*p;i=int(z);j=min(i+1,len(x)-1);f=z-i;return x[i]*(1-f)+x[j]*f
+ return {"min":x[0],"p25":q(.25),"median":q(.5),"p75":q(.75),"max":x[-1]}
+def _score_summary(kr,ur):
+ return {"known_top1":_five([r["top1_score"] for r in kr]),"unknown_top1":_five([r["top1_score"] for r in ur]),"known_margin":_five([r["margin"] for r in kr]),"unknown_margin":_five([r["margin"] for r in ur])}
 def calibrate(kr,ur):
  f=[]
  for ts in SCORE_GRID:
@@ -136,7 +145,7 @@ def _person_rates(rs,ts,tm,known):
   p=r["target_person_id"];d.setdefault(p,[0,0]);d[p][1]+=1;a,_=decision(r,ts,tm);d[p][0]+=int(a and (r["predicted_person_correct"] if known else True))
  return {p:h/n for p,(h,n) in d.items()}
 def holdout(kr,ur,cal):
- if cal["status"]!="FEASIBLE":return {"status":"CALIBRATION_INFEASIBLE","ufir":None,"kcar":None,"kwar":None,"krr":None,"precision":None,"hs_ufir":None,"uper":None,"false_events":[],"high_score_false_events":[],"wrong_known_events":[]}
+ if cal["status"]!="FEASIBLE":return {"status":"CALIBRATION_INFEASIBLE","ufir":None,"kcar":None,"kwar":None,"krr":None,"precision":None,"hs_ufir":None,"uper":None,"forced_choice_unknown_rate":sum(r["candidate_count"]>0 for r in ur)/len(ur) if ur else 0,"forced_choice_known_person_top1":sum(r["predicted_person_correct"] for r in kr)/len(kr) if kr else 0,"forced_choice_known_generation_top1":sum(r["predicted_generation_correct"] for r in kr)/len(kr) if kr else 0,"false_events":[],"high_score_false_events":[],"wrong_known_events":[],"candidate_counts":{"known":_dist(kr),"unknown":_dist(ur)},"score_separation":_score_summary(kr,ur)}
  ts,tm=cal["tau_score"],cal["tau_margin"];k=_known(kr,ts,tm);u=_unknown(ur,ts,tm);ref=cal["high_score_reference"];fe=[];he=[];we=[]
  for r in ur:
   if decision(r,ts,tm)[0]:
@@ -145,7 +154,7 @@ def holdout(kr,ur,cal):
  for r in kr:
   if decision(r,ts,tm)[0] and not r["predicted_person_correct"]:we.append({q:r[q] for q in ("target_person_id","target_generation_id","top1_person_id","top1_generation_id","top1_score","margin","candidate_count")})
  den=k["kcar"]+k["kwar"]+u["ufir"];upr=_person_rates(ur,ts,tm,False);kpr=_person_rates(kr,ts,tm,True)
- return {"status":"EVALUATED","ufir":u["ufir"],"kcar":k["kcar"],"kwar":k["kwar"],"krr":k["krr"],"precision":k["kcar"]/den if den else 1.0,"hs_ufir":len(he)/len(ur) if ur else 0,"uper":sum(v>0 for v in upr.values())/len(upr) if upr else 0,"median_person_ufir":median(upr.values()) if upr else None,"max_person_ufir":max(upr.values()) if upr else None,"median_person_kcar":median(kpr.values()) if kpr else None,"min_person_kcar":min(kpr.values()) if kpr else None,"true_person_filter_exclusion_rate":sum(r["filter_excluded_true_person"] for r in kr)/len(kr) if kr else 0,"forced_choice_unknown_rate":sum(r["candidate_count"]>0 for r in ur)/len(ur) if ur else 0,"forced_choice_known_person_top1":sum(r["predicted_person_correct"] for r in kr)/len(kr) if kr else 0,"forced_choice_known_generation_top1":sum(r["predicted_generation_correct"] for r in kr)/len(kr) if kr else 0,"false_events":fe,"high_score_false_events":he,"wrong_known_events":we,"candidate_counts":{"known":_dist(kr),"unknown":_dist(ur)}}
+ return {"status":"EVALUATED","ufir":u["ufir"],"kcar":k["kcar"],"kwar":k["kwar"],"krr":k["krr"],"precision":k["kcar"]/den if den else 1.0,"hs_ufir":len(he)/len(ur) if ur else 0,"uper":sum(v>0 for v in upr.values())/len(upr) if upr else 0,"median_person_ufir":median(upr.values()) if upr else None,"max_person_ufir":max(upr.values()) if upr else None,"median_person_kcar":median(kpr.values()) if kpr else None,"min_person_kcar":min(kpr.values()) if kpr else None,"true_person_filter_exclusion_rate":sum(r["filter_excluded_true_person"] for r in kr)/len(kr) if kr else 0,"forced_choice_unknown_rate":sum(r["candidate_count"]>0 for r in ur)/len(ur) if ur else 0,"forced_choice_known_person_top1":sum(r["predicted_person_correct"] for r in kr)/len(kr) if kr else 0,"forced_choice_known_generation_top1":sum(r["predicted_generation_correct"] for r in kr)/len(kr) if kr else 0,"false_events":fe,"high_score_false_events":he,"wrong_known_events":we,"candidate_counts":{"known":_dist(kr),"unknown":_dist(ur)},"score_separation":_score_summary(kr,ur)}
 def cell(s,state,policy,mode):
  e=Evaluator(s["candidate_population"]);t=s["truth"];kc=records(e,s["known_cal"],t,"known_cal",state,mode,policy);uc=records(e,s["u_cal"],t,"u_cal",state,mode,policy);ca=calibrate(kc,uc);kh=records(e,s["known_hold"],t,"known_hold",state,mode,policy);ut=records(e,s["u_test"],t,"u_test",state,mode,policy);return {"scenario":s["scenario"],"state":state,"policy":policy,"mode":mode,"calibration":ca,"holdout":holdout(kh,ut,ca)}
 def transfer(src,dst):
@@ -168,6 +177,16 @@ def controls():
  try:e.rank(replace(a,provider_hint=None),"provider_model_narrowed",POLICIES["canonical_combined"]);c6=False
  except ProtocolControlError:c6=True
  ca,ho=split_known(s["known_cal"]+s["known_hold"],s["candidate_population"]);c7=all(x.target_generation_id.endswith("-gen-0") for x in ca) and all(x.target_generation_id.endswith("-gen-1") for x in ho);return {"C1":c1,"C2":c2,"C3":c3,"C4":c4,"C5":c5,"C6":c6,"C7":c7,"all_pass":all((c1,c2,c3,c4,c5,c6,c7))}
+def narrowing_differentials(cs):
+ idx={(c["scenario"],c["state"],c["policy"],c["mode"]):c for c in cs};out=[]
+ for n in SCENARIOS:
+  for st in STATES:
+   for p in POLICIES:
+    b=idx[(n,st,p,"global")]["holdout"]
+    for m in ("provider_model_narrowed","provider_model_time_narrowed"):
+     o=idx[(n,st,p,m)]["holdout"];d=lambda k:None if b.get(k) is None or o.get(k) is None else o[k]-b[k]
+     out.append({"scenario":n,"state":st,"policy":p,"comparison":m+"-global","delta_ufir":d("ufir"),"delta_kcar":d("kcar"),"delta_kwar":d("kwar"),"delta_precision":d("precision"),"delta_true_person_filter_exclusion_rate":d("true_person_filter_exclusion_rate")})
+ return out
 def reference():
  ss={n:prepare(n) for n in SCENARIOS};cs=[];by={n:[] for n in SCENARIOS}
  for n,s in ss.items():
@@ -175,4 +194,4 @@ def reference():
    for p in POLICIES:
     for m in MODES:
      x=cell(s,st,p,m);cs.append(x);by[n].append(x)
- trs=[transfer_summary(a,b,by[a]) for a,b in TRANSFERS];co=controls();pa={n:{st:{p:parity(n,st,p) for p in POLICIES} for st in STATES} for n in SCENARIOS};pp=all(v for n in pa.values() for st in n.values() for v in st.values());coh={n:{"K":sorted(ss[n]["K"]),"U_cal":sorted(ss[n]["Uc"]),"U_test":sorted(ss[n]["Ut"]),"K_sha256":stable_hash(sorted(ss[n]["K"])),"U_cal_sha256":stable_hash(sorted(ss[n]["Uc"])),"U_test_sha256":stable_hash(sorted(ss[n]["Ut"])),"candidate_generation_count":len(ss[n]["candidate_population"])} for n in SCENARIOS};cl=classify(cs,trs,co["all_pass"] and pp);return {"schema":"altru.dev/open-set-false-attribution/0.8","scope":"synthetic-only","protocol":{"base":BASE_PROTOCOL_COMMIT,"amended":AMENDED_AUDITED_PROTOCOL_HEAD,"implementation_spec":IMPLEMENTATION_SPEC_COMMIT},"cohorts":coh,"controls":co,"parity":pa,"all_parity_pass":pp,"cells":cs,"transfers":trs,"classification":cl}
+ trs=[transfer_summary(a,b,by[a]) for a,b in TRANSFERS];co=controls();pa={n:{st:{p:parity(n,st,p) for p in POLICIES} for st in STATES} for n in SCENARIOS};pp=all(v for n in pa.values() for st in n.values() for v in st.values());coh={n:{"K":sorted(ss[n]["K"]),"U_cal":sorted(ss[n]["Uc"]),"U_test":sorted(ss[n]["Ut"]),"K_sha256":stable_hash(sorted(ss[n]["K"])),"U_cal_sha256":stable_hash(sorted(ss[n]["Uc"])),"U_test_sha256":stable_hash(sorted(ss[n]["Ut"])),"candidate_generation_count":len(ss[n]["candidate_population"])} for n in SCENARIOS};cl=classify(cs,trs,co["all_pass"] and pp);return {"schema":"altru.dev/open-set-false-attribution/0.8","scope":"synthetic-only","protocol":{"base":BASE_PROTOCOL_COMMIT,"amended":AMENDED_AUDITED_PROTOCOL_HEAD,"implementation_spec":IMPLEMENTATION_SPEC_COMMIT},"scenario_config":SCENARIOS,"cohorts":coh,"controls":co,"parity":pa,"all_parity_pass":pp,"cells":cs,"narrowing_differentials":narrowing_differentials(cs),"transfers":trs,"classification":cl}
