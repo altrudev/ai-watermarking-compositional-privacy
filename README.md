@@ -322,6 +322,20 @@ The central system-level research question — whether non-identifying model pro
 
 Research assistance was provided using ChatGPT for literature discovery, source comparison, technical synthesis, drafting, implementation support, synthetic test design, and audit assistance. The repository separates documented facts, hypotheses, synthetic experimental results, architectural implications, public criticism, and explicit nonclaims.
 
+## Licensing
+
+This is a **multi-licensed research repository**. No single license applies to every file.
+
+- `lab/**` and `tests/**`: **MIT**.
+- designated machine-readable synthetic evidence/data: **CC BY 4.0**.
+- active research documentation, methods, protocols, audits, and repository explanatory prose: **CC BY-NC 4.0**.
+- designated canonical paper/publication text: **CC BY-NC-ND 4.0**.
+- Altru.dev branding and source-identifying marks: **not licensed by those grants**.
+
+See [`LICENSING.md`](LICENSING.md) for the authoritative path-level scope, historical-license treatment, publication grant, and precedence rules.
+
+Licensing does not transfer authorship, imply endorsement, change research maturity, or grant identity-resolution or production authority.
+
 ## Keywords
 
 AI text watermarking · AI provenance · Claude watermark · Anthropic · AI privacy · privacy engineering · model attribution · user attribution · human attribution · compositional privacy · provenance-mediated identity linkage · unlinkability · re-identification testing · stylometry · semantic linkage · transformation lineage · path dependence · non-commutativity · replication · false attribution · open-set attribution · key architecture · auditability · generative AI governance · AI accountability · digital privacy
