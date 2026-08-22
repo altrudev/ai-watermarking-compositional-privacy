@@ -1,0 +1,53 @@
+{
+  "schema": "altru.dev/governed-open-set-research/0.8",
+  "program_id": "open-set-false-attribution-v0.8",
+  "status": "implementation_authorized_pre_reference",
+  "authority": "Root Human Authority: Ok, perfect let's do it",
+  "research_scope": "synthetic-only",
+  "governing_protocol": {
+    "base_protocol_commit": "7ed99ac13e39946b2853c2b4e4ddf4193728bce9",
+    "amended_audited_head": "0a3f970beb200be97e04b9bc86b56584021e040a",
+    "test_plan": "research/TEST_PLAN-v0.8.md",
+    "amendment": "research/TEST_PLAN-v0.8-AMENDMENT-1.md",
+    "full_ddc_audit": "research/DDC_FULL_AUDIT-v0.8-PROTOCOL.md"
+  },
+  "standing_rules": [
+    "Detection != Provenance != Attribution != Identity Resolution != Authority",
+    "Best match != sufficient match",
+    "Candidate reduction != evidence creation",
+    "Confidence != identity proof",
+    "Unknown rejection != anonymity",
+    "Synthetic evidence != deployed-provider evidence",
+    "Correlation != authorization",
+    "Rules before results",
+    "Negative and adverse evidence must be preserved"
+  ],
+  "execution_gate": {
+    "implementation_allowed": true,
+    "canonical_reference_run_allowed": false,
+    "reference_run_requires": [
+      "exact implementation source review",
+      "focused tests PASS",
+      "cohort leakage controls PASS",
+      "historical scorer parity PASS",
+      "malformed provenance fail-closed PASS",
+      "single-candidate comparator control PASS",
+      "partition immutability PASS",
+      "deterministic implementation behavior PASS",
+      "exact tested bytes equal candidate bytes",
+      "pre-reference DDC implementation audit PASS"
+    ]
+  },
+  "hard_stops": [
+    "real-person identity research",
+    "real user accounts or provider logs",
+    "private conversations or scraped profiles",
+    "production watermark detectors or provider APIs",
+    "production credentials or secrets",
+    "new identity-resolution authority",
+    "external execution boundary expansion",
+    "post-result threshold tuning",
+    "holdout leakage"
+  ],
+  "next_transition": "implement v0.8 candidate and tests; do not generate canonical reference results until exact implementation audit passes"
+}
