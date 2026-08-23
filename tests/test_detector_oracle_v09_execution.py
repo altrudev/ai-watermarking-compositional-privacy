@@ -13,7 +13,11 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
 
     def test_finalize_requires_all_runtime_gates(self):
         ref = {
-            "summary": {"classification": "DETECTOR_MEDIATED_INFERENCE_OBSERVED", "summary_sha256": "old"},
+            "summary": {
+                "classification": "PENDING_EXACT_EXECUTION_GATE",
+                "candidate_classification_before_execution_gate": "DETECTOR_MEDIATED_INFERENCE_OBSERVED",
+                "summary_sha256": "old",
+            },
             "represented_evidence": [], "unknown_evidence": [], "comparisons": [], "m5": [],
         }
         identity = {"head": "abc", "git_blobs": {}, "file_sha256": {}}
@@ -52,9 +56,30 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             self.assertFalse(result["canonical"])
             self.assertEqual(result["reason"], "REGRESSION_FAILED")
 
+    def test_tree_drift_after_replay_blocks_finalization(self):
+        before = {"head": "abc", "git_blobs": {"x": "1"}, "file_sha256": {"x": "a"}}
+        after = {"head": "abc", "git_blobs": {"x": "2"}, "file_sha256": {"x": "b"}}
+        compile_result = {"passed": True, "returncode": 0, "output_sha256": "c"}
+        regression_result = {"passed": True, "returncode": 0, "test_count": 10, "output_sha256": "t"}
+        replay_result = {"passed": True, "first_complete_manifest_sha256": "r", "second_complete_manifest_sha256": "r", "equal_files": {}}
+        ref = {
+            "summary": {"classification": "PENDING_EXACT_EXECUTION_GATE", "candidate_classification_before_execution_gate": "NO_PREDECLARED_EFFECT_ESTABLISHED"},
+            "represented_evidence": [], "unknown_evidence": [], "comparisons": [], "m5": [],
+        }
+        with tempfile.TemporaryDirectory() as td:
+            with patch.object(ex, "exact_tree_identity", side_effect=[before, after]), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)):
+                result = ex.execute(td)
+            self.assertFalse(result["canonical"])
+            self.assertEqual(result["reason"], "EXECUTION_TREE_CHANGED")
+            self.assertFalse((ex.Path(td) / "summary.json").exists())
+
     def test_replay_failure_forces_control_failed(self):
         ref = {
-            "summary": {"classification": "DETECTOR_MEDIATED_INFERENCE_OBSERVED", "summary_sha256": "old"},
+            "summary": {
+                "classification": "PENDING_EXACT_EXECUTION_GATE",
+                "candidate_classification_before_execution_gate": "DETECTOR_MEDIATED_INFERENCE_OBSERVED",
+                "summary_sha256": "old",
+            },
             "represented_evidence": [], "unknown_evidence": [], "comparisons": [], "m5": [],
         }
         identity = {"head": "abc", "git_blobs": {}, "file_sha256": {}}
