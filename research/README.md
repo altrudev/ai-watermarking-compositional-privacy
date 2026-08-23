@@ -30,6 +30,7 @@ Canonical v0.8 experiment commit: `7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e`.
 - [`RESEARCH_METHOD.md`](RESEARCH_METHOD.md) — DDC-governed research process and Python 3.11+ runtime floor.
 - [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md) — exact-head testing, runtime, and reproducibility contract.
 - [`BRANCH_CANONICALITY.md`](BRANCH_CANONICALITY.md) — `main` canonicality and `archive/` branch semantics.
+- [`BRANCH_CLEANUP-2026-08-22.md`](BRANCH_CLEANUP-2026-08-22.md) — branch-ref cleanup evidence closing stale active-state ambiguity.
 - [`EVIDENCE_CUSTODY-v0.8.md`](EVIDENCE_CUSTODY-v0.8.md) — v0.8 evidence hashes, recovery, and durability boundary.
 - [`EXTERNAL_REVIEW_LOG.md`](EXTERNAL_REVIEW_LOG.md) — material external criticism recorded as hypothesis-generating input, not evidence, with source-provenance rules.
 - [`DDC_AUDIT-v0.1-v0.5.md`](DDC_AUDIT-v0.1-v0.5.md) — historical program audit.
