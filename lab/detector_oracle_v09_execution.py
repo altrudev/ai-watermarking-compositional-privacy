@@ -4,8 +4,6 @@ from copy import deepcopy
 from pathlib import Path
 import argparse
 import hashlib
-import json
-import os
 import re
 import subprocess
 import sys
@@ -46,6 +44,7 @@ def exact_tree_identity():
         "lab/detector_oracle_v09_execution.py",
         "tests/test_detector_oracle_v09.py",
         "tests/test_detector_oracle_v09_evidence.py",
+        "tests/test_detector_oracle_v09_execution.py",
     )
     blobs = {}
     file_sha256 = {}
@@ -103,9 +102,8 @@ def _write_jsonl(path, records):
 def finalize_reference(reference, identity, compile_result, regression_result, replay_result):
     final = deepcopy(reference)
     summary = final["summary"]
-    candidate = summary.get("classification")
+    candidate = summary.get("candidate_classification_before_execution_gate")
     gates_pass = bool(compile_result["passed"] and regression_result["passed"] and replay_result["passed"])
-    summary["candidate_classification_before_execution_gate"] = candidate
     summary["complete_replay_control"] = "PASS" if replay_result["passed"] else "FAIL"
     summary["exact_execution_gate"] = "PASS" if gates_pass else "FAIL"
     summary["classification"] = candidate if gates_pass else "CONTROL_FAILED"
@@ -160,34 +158,49 @@ def write_final_bundle(output_dir, reference, execution_record):
     }
 
 
+def _blocked(output_dir, reason, **evidence):
+    blocked = {"status": "BLOCKED", "reason": reason, "canonical": False, **evidence}
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    _write_json(Path(output_dir) / "execution-gate.json", blocked)
+    return blocked
+
+
 def execute(output_dir):
     try:
-        identity = exact_tree_identity()
+        identity_before = exact_tree_identity()
     except ExecutionGateError as exc:
-        blocked = {"status": "BLOCKED", "reason": str(exc), "canonical": False}
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        _write_json(Path(output_dir) / "execution-gate.json", blocked)
-        return blocked
+        return _blocked(output_dir, str(exc))
 
     compile_result = compile_gate()
     if not compile_result["passed"]:
-        blocked = {"status": "BLOCKED", "reason": "COMPILE_FAILED", "canonical": False, "identity": identity, "compile": compile_result}
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        _write_json(Path(output_dir) / "execution-gate.json", blocked)
-        return blocked
+        return _blocked(output_dir, "COMPILE_FAILED", identity=identity_before, compile=compile_result)
 
     regression_result = regression_gate()
     if not regression_result["passed"]:
-        blocked = {"status": "BLOCKED", "reason": "REGRESSION_FAILED", "canonical": False, "identity": identity, "compile": compile_result, "regression": regression_result}
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        _write_json(Path(output_dir) / "execution-gate.json", blocked)
-        return blocked
+        return _blocked(output_dir, "REGRESSION_FAILED", identity=identity_before, compile=compile_result, regression=regression_result)
 
     replay_result, candidate_reference = replay_gate()
+
+    try:
+        identity_after = exact_tree_identity()
+    except ExecutionGateError as exc:
+        return _blocked(
+            output_dir, "EXECUTION_TREE_NOT_CLEAN_AFTER_RUN",
+            underlying_reason=str(exc), identity_before=identity_before,
+            compile=compile_result, regression=regression_result, replay=replay_result,
+        )
+    if identity_after != identity_before:
+        return _blocked(
+            output_dir, "EXECUTION_TREE_CHANGED",
+            identity_before=identity_before, identity_after=identity_after,
+            compile=compile_result, regression=regression_result, replay=replay_result,
+        )
+
     execution_record = {
         "status": "PASS" if replay_result["passed"] else "BLOCKED",
         "canonical": bool(replay_result["passed"]),
-        "identity": identity,
+        "identity_before": identity_before,
+        "identity_after": identity_after,
         "python_version": sys.version,
         "compile": compile_result,
         "regression": regression_result,
@@ -195,7 +208,7 @@ def execute(output_dir):
         "mitigation_status": ev.MITIGATION_STATUS,
         "exploratory_status": ev.EXPLORATORY_STATUS,
     }
-    final = finalize_reference(candidate_reference, identity, compile_result, regression_result, replay_result)
+    final = finalize_reference(candidate_reference, identity_before, compile_result, regression_result, replay_result)
     result = write_final_bundle(output_dir, final, execution_record)
     result["status"] = "PASS" if result["canonical"] else "BLOCKED"
     return result
