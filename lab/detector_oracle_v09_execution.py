@@ -104,7 +104,9 @@ def finalize_reference(reference, identity, compile_result, regression_result, r
     summary = final["summary"]
     candidate = summary.get("candidate_classification_before_execution_gate")
     gates_pass = bool(compile_result["passed"] and regression_result["passed"] and replay_result["passed"])
-    summary["complete_replay_control"] = "PASS" if replay_result["passed"] else "FAIL"
+    replay_status = "PASS" if replay_result["passed"] else "FAIL"
+    summary["complete_replay_control"] = replay_status
+    summary.setdefault("controls", {})["C8_COMPLETE_REPLAY"] = replay_status
     summary["exact_execution_gate"] = "PASS" if gates_pass else "FAIL"
     summary["classification"] = candidate if gates_pass else "CONTROL_FAILED"
     summary["execution_identity"] = {
