@@ -4,7 +4,21 @@
 **Purpose:** record material external criticism that changes the next research question  
 **Evidence class:** hypothesis-generating input, not experimental evidence
 
+## Source-provenance rule
+
+For new entries, retain where available:
+
+- public source URL;
+- access date;
+- participant name as displayed at the source;
+- whether the entry is quotation or paraphrase;
+- an immutable snapshot, screenshot reference, or source-content hash when practical.
+
+If an exact source cannot be recovered, the log must say so rather than inventing or reconstructing a URL from memory. Missing source provenance lowers independent verifiability and must not be hidden by treating the paraphrase as evidence.
+
 ## 2026-08-22 — LinkedIn discussion on AI text watermarking
+
+**Historical source-capture status:** the participant names, date, and research-relevant paraphrases were retained when this entry was created, but the exact LinkedIn post/comment URLs or immutable screenshots were **not preserved in the repository** and could not be recovered during the 2026-08-22 repository-governance hardening audit. These entries therefore remain attributable research-direction notes, not independently source-verifiable quotations or empirical evidence.
 
 ### Elton Willis
 
@@ -53,6 +67,7 @@ This log does not claim that:
 
 - either participant endorses this repository or its conclusions;
 - their comments are experimental evidence;
+- the historical paraphrases are verbatim quotations;
 - any deployed provider uses session-specific, user-specific, or layered watermark keys;
 - any deployed watermark identifies a real person;
 - any public detector exposes hidden user information;

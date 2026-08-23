@@ -27,13 +27,17 @@ Canonical v0.8 experiment commit: `7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e`.
 
 ## Research governance
 
-- [`RESEARCH_METHOD.md`](RESEARCH_METHOD.md) — DDC-governed research process.
-- [`EXTERNAL_REVIEW_LOG.md`](EXTERNAL_REVIEW_LOG.md) — material external criticism recorded as hypothesis-generating input, not evidence.
+- [`RESEARCH_METHOD.md`](RESEARCH_METHOD.md) — DDC-governed research process and Python 3.11+ runtime floor.
+- [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md) — exact-head testing, runtime, and reproducibility contract.
+- [`BRANCH_CANONICALITY.md`](BRANCH_CANONICALITY.md) — `main` canonicality and `archive/` branch semantics.
+- [`EVIDENCE_CUSTODY-v0.8.md`](EVIDENCE_CUSTODY-v0.8.md) — v0.8 evidence hashes, recovery, and durability boundary.
+- [`EXTERNAL_REVIEW_LOG.md`](EXTERNAL_REVIEW_LOG.md) — material external criticism recorded as hypothesis-generating input, not evidence, with source-provenance rules.
 - [`DDC_AUDIT-v0.1-v0.5.md`](DDC_AUDIT-v0.1-v0.5.md) — historical program audit.
 - [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md) — full v0.8 pre-execution protocol audit.
 - [`DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md`](DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md) — exact implementation gate before reference execution.
 - [`DDC_RESULT_AUDIT-v0.8-FINAL.md`](DDC_RESULT_AUDIT-v0.8-FINAL.md) — final result-level DDC audit and clean-merge authorization.
 - [`DDC_FULL_AUDIT-REPOSITORY-2026-08-22.md`](DDC_FULL_AUDIT-REPOSITORY-2026-08-22.md) — repository-level authority, lineage, evidence, reproducibility, and governance audit after v0.8 closure.
+- [`DDC_GOVERNANCE_HARDENING-2026-08-22.md`](DDC_GOVERNANCE_HARDENING-2026-08-22.md) — remediation status for repository-level findings.
 - [`DDC_LICENSE_TRANSITION-2026-08-22.md`](DDC_LICENSE_TRANSITION-2026-08-22.md) — governed licensing transition record.
 
 ## Completed governed program — v0.8
@@ -49,6 +53,7 @@ The v0.8 open-set / false-attribution program is governed and recorded by:
 - [`RESULTS-v0.8.md`](RESULTS-v0.8.md)
 - [`VALIDATION-v0.8.md`](VALIDATION-v0.8.md)
 - [`RAW_EVIDENCE-v0.8.json`](RAW_EVIDENCE-v0.8.json)
+- [`EVIDENCE_CUSTODY-v0.8.md`](EVIDENCE_CUSTODY-v0.8.md)
 - [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md)
 - [`DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md`](DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md)
 - [`DDC_RESULT_AUDIT-v0.8-FINAL.md`](DDC_RESULT_AUDIT-v0.8-FINAL.md)

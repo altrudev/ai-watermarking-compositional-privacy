@@ -26,6 +26,18 @@ External discussion, peer criticism, or architectural thought experiments can ch
 8. **Claim review.** A result may support, narrow, falsify, or leave a claim context-dependent. It does not automatically become a universal invariant.
 9. **External challenge log.** Record material public or peer challenges as hypothesis-generating criticism, including the assumption targeted and the research consequence. See `research/EXTERNAL_REVIEW_LOG.md`.
 
+## Runtime and reproducibility rule
+
+The supported runtime floor for the active repository is **Python 3.11+**. The canonical whole-repository regression command is:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Result-critical execution records must identify the exact bytes executed, the Python version, the test command/count, and deterministic replay evidence where required. A reconstructed exact Git tree may support executable-tree verification, but it must not be mislabeled as a clean network checkout.
+
+See `research/REPRODUCIBILITY.md` for the full runtime/reproducibility contract.
+
 ## Standing DDC distinctions
 
 - **Need != Authority.**
