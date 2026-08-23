@@ -18,6 +18,7 @@ INVALID_REASON = {
     "posterior underflow": "POSTERIOR_NORMALIZATION_UNDERFLOW",
     "evidence underflow": "EVIDENCE_NORMALIZATION_UNDERFLOW",
     "template length mismatch": "OBSERVATION_TEMPLATE_LENGTH_MISMATCH",
+    "vector length mismatch": "OBSERVATION_TEMPLATE_LENGTH_MISMATCH",
 }
 
 
@@ -263,14 +264,15 @@ def _replication_labels(comparisons, unknown_summaries):
     material = defaultdict(set)
     binary = defaultdict(set)
     adaptive = defaultdict(set)
-    invalid_scenarios = defaultdict(set)
+    detector_invalid = defaultdict(set)
+    adaptive_invalid = defaultdict(set)
 
     for row in comparisons:
         d, p, budget, state, evidence = row["tested"]
         family = (d, p, budget, state, evidence)
         if row["comparison_type"] == "DETECTOR_VS_D0":
             if row["status"] != "EVALUATED":
-                invalid_scenarios[family].add(row["scenario"])
+                detector_invalid[family].add(row["scenario"])
                 continue
             if row["scenario_material_pass"]:
                 material[family].add(row["scenario"])
@@ -278,11 +280,12 @@ def _replication_labels(comparisons, unknown_summaries):
                 binary[(state, evidence)].add(row["scenario"])
         elif row["comparison_type"] == "ADAPTIVE_VS_QF":
             if row["status"] != "EVALUATED":
+                adaptive_invalid[family].add(row["scenario"])
                 continue
             if row["utility_ok"] and (row["information_gain_delta"] >= 0.10 or row["accuracy_delta"] >= 0.10):
                 adaptive[family].add(row["scenario"])
 
-    all_families = {
+    detector_families = {
         (d, p, budget, state, evidence)
         for d in core.DISCLOSURES[1:]
         for p in core.POLICIES
@@ -290,33 +293,58 @@ def _replication_labels(comparisons, unknown_summaries):
         for state in core.CORE_STATES
         for evidence in core.CORE_EVIDENCE
     }
-    invalid_families = []
-    for family in all_families:
-        comparable = 3 - len(invalid_scenarios.get(family, set()))
-        if comparable < 2:
-            invalid_families.append(family)
-    invalid_ratio = len(invalid_families) / len(all_families) if all_families else 0.0
+    adaptive_families_all = {
+        (d, p, budget, state, evidence)
+        for d in core.DISCLOSURES[1:]
+        for p in ("QA_REMOVE", "QA_SPOOF")
+        for budget in core.BUDGETS
+        for state in core.CORE_STATES
+        for evidence in core.CORE_EVIDENCE
+    }
+    binary_families_all = {(state, evidence) for state in core.CORE_STATES for evidence in core.CORE_EVIDENCE}
+
+    invalid_detector_families = [family for family in detector_families if 3 - len(detector_invalid.get(family, set())) < 2]
+    invalid_adaptive_families = [family for family in adaptive_families_all if 3 - len(adaptive_invalid.get(family, set())) < 2]
+    invalid_binary_families = []
+    for state, evidence in binary_families_all:
+        family = ("D1", "QF", 16, state, evidence)
+        if 3 - len(detector_invalid.get(family, set())) < 2:
+            invalid_binary_families.append((state, evidence))
+
+    detector_invalid_ratio = len(invalid_detector_families) / len(detector_families) if detector_families else 0.0
+    adaptive_invalid_ratio = len(invalid_adaptive_families) / len(adaptive_families_all) if adaptive_families_all else 0.0
+    binary_invalid_ratio = len(invalid_binary_families) / len(binary_families_all) if binary_families_all else 0.0
+
     unknown_invalid = [r for r in unknown_summaries if r["status"] != "EVALUATED"]
     unknown_controls_complete = len(unknown_invalid) == 0
 
     material_families = sorted([list(k) for k, v in material.items() if len(v) >= 2])
     binary_families = sorted([list(k) for k, v in binary.items() if len(v) >= 2])
     adaptive_families = sorted([list(k) for k, v in adaptive.items() if len(v) >= 2])
-    matrix_valid = invalid_ratio <= 0.20
+
+    material_matrix_valid = detector_invalid_ratio <= 0.20
+    binary_matrix_valid = binary_invalid_ratio <= 0.20
+    adaptive_matrix_valid = adaptive_invalid_ratio <= 0.20
     false_attr = any(r["status"] == "EVALUATED" and int(r.get("accepted", 0)) > 0 for r in unknown_summaries)
 
     return {
-        "material": bool(material_families) and matrix_valid and unknown_controls_complete,
-        "binary": bool(binary_families) and matrix_valid and unknown_controls_complete,
-        "adaptive": bool(adaptive_families) and matrix_valid and unknown_controls_complete,
+        "material": bool(material_families) and material_matrix_valid and unknown_controls_complete,
+        "binary": bool(binary_families) and binary_matrix_valid and unknown_controls_complete,
+        "adaptive": bool(adaptive_families) and adaptive_matrix_valid and unknown_controls_complete,
         "mitigation": False,
         "mitigation_status": MITIGATION_STATUS,
         "false_attr": false_attr,
         "material_families": material_families,
         "binary_families": binary_families,
         "adaptive_families": adaptive_families,
-        "invalid_families": [list(x) for x in sorted(invalid_families)],
-        "invalid_family_ratio": invalid_ratio,
+        "invalid_detector_families": [list(x) for x in sorted(invalid_detector_families)],
+        "invalid_adaptive_families": [list(x) for x in sorted(invalid_adaptive_families)],
+        "invalid_binary_families": [list(x) for x in sorted(invalid_binary_families)],
+        "detector_invalid_family_ratio": detector_invalid_ratio,
+        "adaptive_invalid_family_ratio": adaptive_invalid_ratio,
+        "binary_invalid_family_ratio": binary_invalid_ratio,
+        "invalid_families": [list(x) for x in sorted(invalid_detector_families)],
+        "invalid_family_ratio": detector_invalid_ratio,
         "unknown_invalid_condition_count": len(unknown_invalid),
         "unknown_controls_complete": unknown_controls_complete,
     }
@@ -363,8 +391,14 @@ def disclosure_parity_control():
             expected_active = sum(abs(alpha*val) > 0.05 for alpha, val in zip(core.ALPHA[a.k], a.z))
             if d5 != (round(s, 3), core._distance_band(s), expected_active):
                 return False
-            n = core.map_hash(f"{a.scenario}|{a.artifact_id}|1|D6", -0.08, 0.08)
-            if core.disclose(a, a.z, "D6", 1) != core._band(min(1.0, max(0.0, s+n))):
+            for query_index in range(1, 9):
+                n = core.map_hash(f"{a.scenario}|{a.artifact_id}|{query_index}|D6", -0.08, 0.08)
+                expected = core._band(min(1.0, max(0.0, s+n)))
+                if core.disclose(a, a.z, "D6", query_index) != expected:
+                    return False
+            if core.disclose(a, a.z, "D6", 9) != "RATE_LIMITED":
+                return False
+            if core.disclose(a, a.z, "D6", 16) != "RATE_LIMITED":
                 return False
     return True
 
