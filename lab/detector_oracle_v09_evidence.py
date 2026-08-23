@@ -384,6 +384,14 @@ def k0_negative_control():
     return True
 
 
+def _normalized_base_controls():
+    raw = dict(core.controls())
+    raw.pop("all_pass", None)
+    policy_replay = bool(raw.pop("C8"))
+    raw["C8_POLICY_REPLAY_SUBCONTROL"] = policy_replay
+    return raw
+
+
 def build_reference():
     represented_summaries, represented_records = represented_matrix()
     unknown_summaries, unknown_records = unknown_matrix()
@@ -391,12 +399,12 @@ def build_reference():
     labels = _replication_labels(raw_comparisons, unknown_summaries)
     comparisons = annotate_comparisons(raw_comparisons, labels)
     m5 = m5_records()
-    base_controls = core.controls()
+    base_controls = _normalized_base_controls()
     c3_full = disclosure_parity_control()
     c6_full = k0_negative_control()
-    control_pass = bool(base_controls["all_pass"] and c3_full and c6_full and labels["unknown_controls_complete"])
+    candidate_control_pass = bool(all(base_controls.values()) and c3_full and c6_full and labels["unknown_controls_complete"])
     candidate_classification = core.classify_summary(
-        control_pass,
+        candidate_control_pass,
         labels["material"], labels["binary"], labels["adaptive"], False, labels["false_attr"],
     )
     summary = {
@@ -415,6 +423,7 @@ def build_reference():
             "C3_FULL_DISCLOSURE_PARITY": c3_full,
             "C6_FULL_K0_NEGATIVE": c6_full,
             "UNKNOWN_CONTROL_MATRIX_COMPLETE": labels["unknown_controls_complete"],
+            "C8_COMPLETE_REPLAY": "PENDING_SECOND_IDENTICAL_RUN",
         },
         "complete_replay_control": "PENDING_SECOND_IDENTICAL_RUN",
         "represented_condition_count": len(represented_summaries),
