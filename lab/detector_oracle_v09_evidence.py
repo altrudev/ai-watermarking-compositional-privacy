@@ -12,6 +12,7 @@ EVIDENCE_AMENDMENT = "3b0bfb712f41a3112fbb1d3c3019ceff89f63713"
 EVIDENCE_AUDIT_PASS = "59374595c41e4c3732d5eb5b1a117c9623884075"
 MITIGATION_STATUS = "NOT_EVALUABLE_UNDER_V0.9"
 EXPLORATORY_STATUS = "EXPLORATORY_SENSITIVITY_MATRIX_NOT_EXECUTED"
+PENDING_CLASSIFICATION = "PENDING_EXACT_EXECUTION_GATE"
 
 INVALID_REASON = {
     "posterior underflow": "POSTERIOR_NORMALIZATION_UNDERFLOW",
@@ -29,12 +30,8 @@ def sha256_text(text):
 
 
 def sha256_records(records):
-    rows = sorted(records, key=lambda r: (
-        str(r.get("scenario", "")), str(r.get("artifact_id", "")),
-        str(r.get("disclosure", "")), str(r.get("policy", "")),
-        int(r.get("budget", 0)), str(r.get("state", "")), str(r.get("evidence", "")),
-    ))
-    return sha256_text("\n".join(canonical_json(r) for r in rows) + ("\n" if rows else ""))
+    rows = sorted((canonical_json(r) for r in records))
+    return sha256_text("\n".join(rows) + ("\n" if rows else ""))
 
 
 def _posterior_from_run(a, run, disclosure, policy, budget, state, evidence):
@@ -223,8 +220,7 @@ def matched_comparisons(represented_summaries):
     for test in represented_summaries:
         if test["disclosure"] == "D0":
             continue
-        key = (test["scenario"], "D0", "QF", test["budget"], test["state"], test["evidence"])
-        baseline = idx[key]
+        baseline = idx[(test["scenario"], "D0", "QF", test["budget"], test["state"], test["evidence"])]
         rows.append(_comparison_record(test, baseline, "DETECTOR_VS_D0"))
         if test["policy"] in {"QA_REMOVE", "QA_SPOOF"}:
             qf = idx[(test["scenario"], test["disclosure"], "QF", test["budget"], test["state"], test["evidence"])]
@@ -263,56 +259,56 @@ def m5_records():
     return rows
 
 
-def _replication_labels(comparisons, represented_summaries, unknown_summaries):
-    by_family = defaultdict(set)
+def _replication_labels(comparisons, unknown_summaries):
+    material = defaultdict(set)
     binary = defaultdict(set)
     adaptive = defaultdict(set)
-    invalid_family_scenarios = defaultdict(set)
+    invalid_scenarios = defaultdict(set)
 
     for row in comparisons:
-        tested = row["tested"]
-        d, p, budget, state, evidence = tested
+        d, p, budget, state, evidence = row["tested"]
+        family = (d, p, budget, state, evidence)
         if row["comparison_type"] == "DETECTOR_VS_D0":
-            family = (d, p, budget, state, evidence)
             if row["status"] != "EVALUATED":
-                invalid_family_scenarios[family].add(row["scenario"])
+                invalid_scenarios[family].add(row["scenario"])
                 continue
             if row["scenario_material_pass"]:
-                by_family[family].add(row["scenario"])
+                material[family].add(row["scenario"])
             if d == "D1" and p == "QF" and budget == 16 and row["scenario_material_pass"]:
                 binary[(state, evidence)].add(row["scenario"])
         elif row["comparison_type"] == "ADAPTIVE_VS_QF":
-            family = (d, p, budget, state, evidence)
             if row["status"] != "EVALUATED":
                 continue
             if row["utility_ok"] and (row["information_gain_delta"] >= 0.10 or row["accuracy_delta"] >= 0.10):
                 adaptive[family].add(row["scenario"])
 
-    all_families = set()
-    for d in core.DISCLOSURES[1:]:
-        for p in core.POLICIES:
-            for budget in core.BUDGETS:
-                for state in core.CORE_STATES:
-                    for evidence in core.CORE_EVIDENCE:
-                        all_families.add((d, p, budget, state, evidence))
-
+    all_families = {
+        (d, p, budget, state, evidence)
+        for d in core.DISCLOSURES[1:]
+        for p in core.POLICIES
+        for budget in core.BUDGETS
+        for state in core.CORE_STATES
+        for evidence in core.CORE_EVIDENCE
+    }
     invalid_families = []
     for family in all_families:
-        comparable = 3 - len(invalid_family_scenarios.get(family, set()))
+        comparable = 3 - len(invalid_scenarios.get(family, set()))
         if comparable < 2:
             invalid_families.append(family)
     invalid_ratio = len(invalid_families) / len(all_families) if all_families else 0.0
+    unknown_invalid = [r for r in unknown_summaries if r["status"] != "EVALUATED"]
+    unknown_controls_complete = len(unknown_invalid) == 0
 
-    material_families = sorted([list(k) for k, v in by_family.items() if len(v) >= 2])
+    material_families = sorted([list(k) for k, v in material.items() if len(v) >= 2])
     binary_families = sorted([list(k) for k, v in binary.items() if len(v) >= 2])
     adaptive_families = sorted([list(k) for k, v in adaptive.items() if len(v) >= 2])
-    false_attr = any(r.get("status") == "EVALUATED" and int(r.get("accepted", 0)) > 0 for r in unknown_summaries)
-
     matrix_valid = invalid_ratio <= 0.20
+    false_attr = any(r["status"] == "EVALUATED" and int(r.get("accepted", 0)) > 0 for r in unknown_summaries)
+
     return {
-        "material": bool(material_families) and matrix_valid,
-        "binary": bool(binary_families) and matrix_valid,
-        "adaptive": bool(adaptive_families) and matrix_valid,
+        "material": bool(material_families) and matrix_valid and unknown_controls_complete,
+        "binary": bool(binary_families) and matrix_valid and unknown_controls_complete,
+        "adaptive": bool(adaptive_families) and matrix_valid and unknown_controls_complete,
         "mitigation": False,
         "mitigation_status": MITIGATION_STATUS,
         "false_attr": false_attr,
@@ -321,7 +317,28 @@ def _replication_labels(comparisons, represented_summaries, unknown_summaries):
         "adaptive_families": adaptive_families,
         "invalid_families": [list(x) for x in sorted(invalid_families)],
         "invalid_family_ratio": invalid_ratio,
+        "unknown_invalid_condition_count": len(unknown_invalid),
+        "unknown_controls_complete": unknown_controls_complete,
     }
+
+
+def annotate_comparisons(comparisons, labels):
+    material = {tuple(x) for x in labels["material_families"]}
+    binary = {tuple(x) for x in labels["binary_families"]}
+    adaptive = {tuple(x) for x in labels["adaptive_families"]}
+    out = []
+    for row in comparisons:
+        r = dict(row)
+        d, p, budget, state, evidence = r["tested"]
+        family = (d, p, budget, state, evidence)
+        if r["comparison_type"] == "DETECTOR_VS_D0":
+            r["family_replication_pass"] = family in material
+            r["binary_replication_pass"] = bool(d == "D1" and p == "QF" and budget == 16 and (state, evidence) in binary)
+        else:
+            r["family_replication_pass"] = family in adaptive
+            r["binary_replication_pass"] = False
+        out.append(r)
+    return out
 
 
 def disclosure_parity_control():
@@ -336,28 +353,49 @@ def disclosure_parity_control():
             if core.disclose(a, a.z, "D3", 1) != round(s, 3):
                 return False
             d4 = core.disclose(a, a.z, "D4", 1)
-            if d4[0] != round(s, 3):
+            expected_bins = []
+            for alpha, val in zip(core.ALPHA[a.k], a.z):
+                c = alpha * val
+                expected_bins.append("NEG" if c < -0.05 else "POS" if c > 0.05 else "NEUTRAL")
+            if d4 != (round(s, 3), tuple(expected_bins)):
                 return False
             d5 = core.disclose(a, a.z, "D5", 1)
-            if d5[0] != round(s, 3) or d5[1] != core._distance_band(s):
+            expected_active = sum(abs(alpha*val) > 0.05 for alpha, val in zip(core.ALPHA[a.k], a.z))
+            if d5 != (round(s, 3), core._distance_band(s), expected_active):
                 return False
-            d6 = core.disclose(a, a.z, "D6", 1)
             n = core.map_hash(f"{a.scenario}|{a.artifact_id}|1|D6", -0.08, 0.08)
-            if d6 != core._band(min(1.0, max(0.0, s+n))):
+            if core.disclose(a, a.z, "D6", 1) != core._band(min(1.0, max(0.0, s+n))):
                 return False
+    return True
+
+
+def k0_negative_control():
+    for scenario in core.SCENARIOS:
+        for state in ("A0", "A4"):
+            for a in core.artifacts_for(scenario, "K0", range(8, 12), state):
+                if core.hidden_score(a) >= 0.65:
+                    return False
+                if core.disclose(a, a.z, "D1", 1) != "NOT_DETECTED":
+                    return False
+                if core.disclose(a, a.z, "D2", 1) != "LOW":
+                    return False
+                if any(core.disclose(a, a.z, "D6", q) != "LOW" for q in range(1, 9)):
+                    return False
     return True
 
 
 def build_reference():
     represented_summaries, represented_records = represented_matrix()
     unknown_summaries, unknown_records = unknown_matrix()
-    comparisons = matched_comparisons(represented_summaries)
+    raw_comparisons = matched_comparisons(represented_summaries)
+    labels = _replication_labels(raw_comparisons, unknown_summaries)
+    comparisons = annotate_comparisons(raw_comparisons, labels)
     m5 = m5_records()
     base_controls = core.controls()
     c3_full = disclosure_parity_control()
-    labels = _replication_labels(comparisons, represented_summaries, unknown_summaries)
-    control_pass = bool(base_controls["all_pass"] and c3_full)
-    classification = core.classify_summary(
+    c6_full = k0_negative_control()
+    control_pass = bool(base_controls["all_pass"] and c3_full and c6_full and labels["unknown_controls_complete"])
+    candidate_classification = core.classify_summary(
         control_pass,
         labels["material"], labels["binary"], labels["adaptive"], False, labels["false_attr"],
     )
@@ -372,7 +410,12 @@ def build_reference():
             "evidence_amendment_094": EVIDENCE_AMENDMENT,
             "evidence_audit_pass": EVIDENCE_AUDIT_PASS,
         },
-        "controls": {**base_controls, "C3_FULL_DISCLOSURE_PARITY": c3_full},
+        "controls": {
+            **base_controls,
+            "C3_FULL_DISCLOSURE_PARITY": c3_full,
+            "C6_FULL_K0_NEGATIVE": c6_full,
+            "UNKNOWN_CONTROL_MATRIX_COMPLETE": labels["unknown_controls_complete"],
+        },
         "complete_replay_control": "PENDING_SECOND_IDENTICAL_RUN",
         "represented_condition_count": len(represented_summaries),
         "unknown_condition_count": len(unknown_summaries),
@@ -381,7 +424,8 @@ def build_reference():
         "comparison_count": len(comparisons),
         "m5_condition_count": len(m5),
         "labels": labels,
-        "classification": classification,
+        "candidate_classification_before_execution_gate": candidate_classification,
+        "classification": PENDING_CLASSIFICATION,
         "mitigation_status": MITIGATION_STATUS,
         "exploratory_status": EXPLORATORY_STATUS,
         "represented_summaries": represented_summaries,
@@ -405,7 +449,7 @@ def build_reference():
 
 
 def _jsonl_bytes(records):
-    ordered = sorted(records, key=lambda r: canonical_json(r))
+    ordered = sorted(records, key=canonical_json)
     return ("\n".join(canonical_json(r) for r in ordered) + ("\n" if ordered else "")).encode("utf-8")
 
 
@@ -464,4 +508,5 @@ def write_bundle(directory):
         "directory": str(directory),
         "complete_manifest_sha256": payloads["complete_manifest_sha256"],
         "summary_sha256": reference["summary"]["summary_sha256"],
+        "classification": reference["summary"]["classification"],
     }
