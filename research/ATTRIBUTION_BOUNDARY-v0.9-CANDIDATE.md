@@ -3,7 +3,7 @@
 **Status:** candidate research direction only  
 **Implementation authorization:** NO  
 **Canonical reference execution authorization:** NO  
-**Predecessor constraint:** v0.8 must be completed and closed, or explicitly superseded through a separate governed transition, before v0.9 implementation begins  
+**Predecessor constraint:** v0.8 is completed and closed; any v0.9 protocol, implementation, or execution requires a separate governed transition  
 **Scope:** synthetic-only
 
 ## Why this candidate exists
@@ -105,4 +105,4 @@ This candidate does not claim that:
 
 This file is a research queue item, not a protocol.
 
-The permitted next transition remains the already-authorized v0.8 implementation path. Starting v0.9 implementation before v0.8 closure or explicit governed supersession would break experiment lineage and rules-before-results discipline.
+v0.8 is closed. The next permitted v0.9 transition is **protocol predeclaration only after a new Root Human Authority instruction**. v0.9 implementation and canonical execution remain unauthorized until that future protocol has frozen its scope, controls, metrics, failure gates, claim boundaries, and lineage and has passed its own DDC audit.
