@@ -10,6 +10,7 @@ class DetectorOracleEvidenceTests(unittest.TestCase):
         self.assertEqual(ev.EVIDENCE_AMENDMENT, "3b0bfb712f41a3112fbb1d3c3019ceff89f63713")
         self.assertEqual(ev.EVIDENCE_AUDIT_PASS, "59374595c41e4c3732d5eb5b1a117c9623884075")
         self.assertEqual(ev.MITIGATION_STATUS, "NOT_EVALUABLE_UNDER_V0.9")
+        self.assertEqual(ev.PENDING_CLASSIFICATION, "PENDING_EXACT_EXECUTION_GATE")
 
     def test_artifact_record_contains_required_custody(self):
         a = core.make_artifact("S1", "K2", 0, 8, "A0")
@@ -64,16 +65,16 @@ class DetectorOracleEvidenceTests(unittest.TestCase):
         qf = core.run_policy(a, "D3", "QF", 4)
         rm = core.run_policy(a, "D3", "QA_REMOVE", 4)
         sp = core.run_policy(a, "D3", "QA_SPOOF", 4)
-        self.assertAlmostEqual(qf.final_score - rm.final_score, qf.final_score - rm.final_score)
-        self.assertAlmostEqual(sp.final_score - qf.final_score, sp.final_score - qf.final_score)
         rows = ev.m5_records()
         hit = next(r for r in rows if r["scenario"] == "S1" and r["disclosure"] == "D3" and r["budget"] == 4 and r["state"] == "A0")
-        self.assertIn("median_removal_advantage", hit)
-        self.assertIn("median_spoof_advantage", hit)
+        artifact = next(r for r in hit["artifact_values"] if r["artifact_id"] == a.artifact_id)
+        self.assertAlmostEqual(artifact["removal_advantage"], qf.final_score - rm.final_score)
+        self.assertAlmostEqual(artifact["spoof_advantage"], sp.final_score - qf.final_score)
         self.assertGreater(hit["artifact_count"], 0)
 
-    def test_full_disclosure_parity_control(self):
+    def test_full_disclosure_parity_and_k0_controls(self):
         self.assertTrue(ev.disclosure_parity_control())
+        self.assertTrue(ev.k0_negative_control())
 
     def test_mitigation_cannot_emit_positive_label(self):
         represented = []
@@ -87,9 +88,24 @@ class DetectorOracleEvidenceTests(unittest.TestCase):
                     "median_candidate_size": 4, "median_utility": .9,
                 })
         comps = ev.matched_comparisons(represented)
-        labels = ev._replication_labels(comps, represented, unknown)
+        labels = ev._replication_labels(comps, unknown)
         self.assertFalse(labels["mitigation"])
         self.assertEqual(labels["mitigation_status"], "NOT_EVALUABLE_UNDER_V0.9")
+
+    def test_annotated_comparison_retains_family_replication(self):
+        rows = []
+        for scenario in core.SCENARIOS:
+            rows.append({
+                "status": "EVALUATED", "invalid_reason": None, "comparison_type": "DETECTOR_VS_D0",
+                "scenario": scenario, "tested": ["D1", "QF", 16, "A0", "E0"],
+                "baseline": ["D0", "QF", 16, "A0", "E0"], "information_gain_delta": .3,
+                "accuracy_delta": .2, "candidate_size_reduction": 1, "utility_ok": True,
+                "scenario_material_pass": True,
+            })
+        labels = ev._replication_labels(rows, [])
+        annotated = ev.annotate_comparisons(rows, labels)
+        self.assertTrue(all(r["family_replication_pass"] for r in annotated))
+        self.assertTrue(all(r["binary_replication_pass"] for r in annotated))
 
     def test_bundle_serialization_is_deterministic_for_same_reference(self):
         summary, records = ev.condition_evidence("S1", "D4", "QA_REMOVE", 4, "A0", "E3")
