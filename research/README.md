@@ -33,6 +33,7 @@ Canonical v0.8 experiment commit: `7cbb6d8b3e76fdd7a3bbce6db92d34442d025c5e`.
 - [`DDC_FULL_AUDIT-v0.8-PROTOCOL.md`](DDC_FULL_AUDIT-v0.8-PROTOCOL.md) — full v0.8 pre-execution protocol audit.
 - [`DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md`](DDC_IMPLEMENTATION_AUDIT-v0.8-PRE-REFERENCE.md) — exact implementation gate before reference execution.
 - [`DDC_RESULT_AUDIT-v0.8-FINAL.md`](DDC_RESULT_AUDIT-v0.8-FINAL.md) — final result-level DDC audit and clean-merge authorization.
+- [`DDC_FULL_AUDIT-REPOSITORY-2026-08-22.md`](DDC_FULL_AUDIT-REPOSITORY-2026-08-22.md) — repository-level authority, lineage, evidence, reproducibility, and governance audit after v0.8 closure.
 - [`DDC_LICENSE_TRANSITION-2026-08-22.md`](DDC_LICENSE_TRANSITION-2026-08-22.md) — governed licensing transition record.
 
 ## Completed governed program — v0.8
