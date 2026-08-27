@@ -393,7 +393,7 @@ def execute(output_dir, expected_head):
             persist=False,
             expected_head=expected_head,
             repo_root=identity_before["repo_root"],
-            output_dir=str(Path(output_dir).expanduser()),
+            requested_output_dir=str(Path(output_dir).expanduser()),
         )
 
     compile_result = compile_gate()
