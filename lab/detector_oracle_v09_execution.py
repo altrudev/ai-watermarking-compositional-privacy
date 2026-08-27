@@ -4,9 +4,12 @@ from copy import deepcopy
 from pathlib import Path
 import argparse
 import hashlib
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 from lab import detector_oracle_v09_evidence as ev
 
@@ -15,8 +18,11 @@ class ExecutionGateError(RuntimeError):
     pass
 
 
-def _run(args):
-    p = subprocess.run(args, text=True, capture_output=True)
+EXECUTED_ROOTS = ("lab", "tests")
+
+
+def _run(args, env=None):
+    p = subprocess.run(args, text=True, capture_output=True, env=env)
     return {
         "args": list(args),
         "returncode": p.returncode,
@@ -26,49 +32,195 @@ def _run(args):
     }
 
 
+def _git_binary():
+    for candidate in ("/usr/bin/git", "/bin/git"):
+        if Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return str(Path(candidate).resolve())
+    found = shutil.which("git")
+    if not found:
+        raise ExecutionGateError("GIT_NOT_FOUND")
+    return str(Path(found).resolve())
+
+
+def _git_env():
+    env = os.environ.copy()
+    for key in tuple(env):
+        if key.startswith("GIT_"):
+            env.pop(key, None)
+    env.update({
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "LC_ALL": "C",
+    })
+    return env
+
+
 def _git(args):
-    r = _run(["git", *args])
+    r = _run([
+        _git_binary(),
+        "-c", "core.fsmonitor=false",
+        "-c", "core.hooksPath=/dev/null",
+        "-c", "core.excludesFile=/dev/null",
+        *args,
+    ], env=_git_env())
     if r["returncode"] != 0:
         raise ExecutionGateError("GIT_COMMAND_FAILED")
     return r["stdout"].strip()
 
 
+def runtime_isolation():
+    result = {
+        "ignore_environment": bool(sys.flags.ignore_environment),
+        "no_user_site": bool(sys.flags.no_user_site),
+        "no_site": bool(sys.flags.no_site),
+    }
+    result["passed"] = all(result.values())
+    return result
+
+
+def _head_python_blobs():
+    raw = _git(["ls-tree", "-r", "-z", "HEAD", "--", *EXECUTED_ROOTS])
+    blobs = {}
+    modes = {}
+    for row in raw.split("\0"):
+        if not row:
+            continue
+        meta, path = row.split("\t", 1)
+        mode, kind, sha = meta.split(" ", 2)
+        if kind != "blob" or not path.endswith(".py"):
+            continue
+        if mode not in {"100644", "100755"}:
+            raise ExecutionGateError(f"UNSUPPORTED_EXECUTED_FILE_MODE:{path}")
+        blobs[path] = sha
+        modes[path] = mode
+    if not blobs:
+        raise ExecutionGateError("NO_TRACKED_PYTHON_FILES")
+    return blobs, modes
+
+
+def _actual_python_paths():
+    paths = set()
+    for root_name in EXECUTED_ROOTS:
+        root = Path(root_name)
+        if not root.is_dir():
+            raise ExecutionGateError(f"EXECUTED_ROOT_MISSING:{root_name}")
+        for path in root.rglob("*.py"):
+            if path.is_file() or path.is_symlink():
+                paths.add(path.as_posix())
+    return paths
+
+
+def _index_flags():
+    flags = {}
+    raw = _git(["ls-files", "-v", "--", *EXECUTED_ROOTS])
+    for line in raw.splitlines():
+        if len(line) < 3:
+            continue
+        tag = line[0]
+        path = line[2:]
+        if path.endswith(".py"):
+            flags[path] = tag
+    return flags
+
+
 def exact_tree_identity(expected_head=None):
-    head = _git(["rev-parse", "HEAD"])
+    repo_root = Path(_git(["rev-parse", "--show-toplevel"])).resolve()
+    if repo_root != Path.cwd().resolve():
+        raise ExecutionGateError("REPOSITORY_ROOT_MISMATCH")
+
+    head = _git(["rev-parse", "--verify", "HEAD"])
     if expected_head is not None and head != expected_head:
         raise ExecutionGateError("EXPECTED_HEAD_MISMATCH")
-    status = _git(["status", "--porcelain"])
+
+    status = _git(["status", "--porcelain=v1", "--untracked-files=all"])
     if status:
         raise ExecutionGateError("WORKTREE_NOT_CLEAN")
-    paths = (
-        "lab/detector_oracle_v09.py",
-        "lab/detector_oracle_v09_evidence.py",
-        "lab/detector_oracle_v09_execution.py",
-        "tests/test_detector_oracle_v09.py",
-        "tests/test_detector_oracle_v09_evidence.py",
-        "tests/test_detector_oracle_v09_execution.py",
-    )
-    blobs = {}
+
+    expected_blobs, modes = _head_python_blobs()
+    actual_paths = _actual_python_paths()
+    expected_paths = set(expected_blobs)
+    if actual_paths != expected_paths:
+        missing = sorted(expected_paths - actual_paths)
+        extra = sorted(actual_paths - expected_paths)
+        detail = ev.canonical_json({"missing": missing, "extra": extra})
+        raise ExecutionGateError("EXECUTED_SOURCE_SET_MISMATCH:" + detail)
+
+    flags = _index_flags()
+    abnormal_flags = {path: flags.get(path) for path in sorted(expected_paths) if flags.get(path) != "H"}
+    if abnormal_flags:
+        raise ExecutionGateError("EXECUTED_INDEX_FLAGS_NOT_CLEAN:" + ev.canonical_json(abnormal_flags))
+
+    actual_blobs = {}
     file_sha256 = {}
-    for path in paths:
-        blobs[path] = _git(["hash-object", path])
+    for path in sorted(expected_paths):
+        actual_blob = _git(["hash-object", "--no-filters", "--", path])
+        expected_blob = expected_blobs[path]
+        if actual_blob != expected_blob:
+            raise ExecutionGateError(f"EXECUTED_BLOB_MISMATCH:{path}")
+        actual_blobs[path] = actual_blob
         file_sha256[path] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    return {"head": head, "expected_head": expected_head, "git_blobs": blobs, "file_sha256": file_sha256}
+
+    return {
+        "head": head,
+        "expected_head": expected_head,
+        "head_tree": _git(["rev-parse", "HEAD^{tree}"]),
+        "repo_root": str(repo_root),
+        "git_executable": _git_binary(),
+        "git_version": _git(["--version"]),
+        "git_blobs": actual_blobs,
+        "head_git_blobs": expected_blobs,
+        "file_modes": modes,
+        "index_flags": flags,
+        "file_sha256": file_sha256,
+    }
+
+
+def _controlled_python_env(pycache_prefix):
+    env = {key: value for key, value in os.environ.items() if not key.startswith("PYTHON")}
+    env.update({
+        "PYTHONHASHSEED": "0",
+        "PYTHONPYCACHEPREFIX": str(pycache_prefix),
+    })
+    return env
 
 
 def compile_gate():
-    files = sorted(str(p) for root in ("lab", "tests") for p in Path(root).glob("*.py"))
+    files = sorted(str(p) for root in EXECUTED_ROOTS for p in Path(root).glob("*.py"))
     if not files:
         raise ExecutionGateError("NO_PYTHON_FILES")
-    result = _run([sys.executable, "-m", "py_compile", *files])
+    with tempfile.TemporaryDirectory(prefix="v09-compile-cache-") as cache:
+        result = _run(
+            [sys.executable, "-S", "-s", "-m", "py_compile", *files],
+            env=_controlled_python_env(cache),
+        )
+    result["runtime_controls"] = {
+        "pythonpath_inherited": False,
+        "site_import_disabled": True,
+        "user_site_disabled": True,
+        "pycache_outside_worktree": True,
+        "pythonhashseed": "0",
+    }
     result["passed"] = result["returncode"] == 0
     return result
 
 
 def regression_gate():
-    result = _run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
+    with tempfile.TemporaryDirectory(prefix="v09-regression-cache-") as cache:
+        result = _run(
+            [sys.executable, "-S", "-s", "-m", "unittest", "discover", "-s", "tests", "-v"],
+            env=_controlled_python_env(cache),
+        )
     combined = result["stdout"] + result["stderr"]
     m = re.search(r"Ran\s+(\d+)\s+tests?", combined)
+    result["runtime_controls"] = {
+        "pythonpath_inherited": False,
+        "site_import_disabled": True,
+        "user_site_disabled": True,
+        "pycache_outside_worktree": True,
+        "pythonhashseed": "0",
+    }
     result["test_count"] = int(m.group(1)) if m else None
     result["passed"] = bool(result["returncode"] == 0 and re.search(r"\bOK\b", combined))
     return result
@@ -121,8 +273,16 @@ def finalize_reference(reference, identity, compile_result, regression_result, r
     summary["execution_identity"] = {
         "head": identity["head"],
         "expected_head": identity.get("expected_head"),
+        "head_tree": identity.get("head_tree"),
+        "repo_root": identity.get("repo_root"),
+        "git_executable": identity.get("git_executable"),
+        "git_version": identity.get("git_version"),
         "git_blobs": identity["git_blobs"],
+        "head_git_blobs": identity.get("head_git_blobs", {}),
+        "file_modes": identity.get("file_modes", {}),
+        "index_flags": identity.get("index_flags", {}),
         "file_sha256": identity["file_sha256"],
+        "runtime_isolation": identity.get("runtime_isolation"),
         "python_version": sys.version,
         "python_executable": sys.executable,
     }
@@ -193,20 +353,48 @@ def write_final_bundle(output_dir, reference, execution_record):
     }
 
 
-def _blocked(output_dir, reason, **evidence):
+def _blocked(output_dir, reason, persist=True, **evidence):
     blocked = {"status": "BLOCKED", "reason": reason, "canonical": False, **evidence}
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-    _write_json(Path(output_dir) / "execution-gate.json", blocked)
+    if persist:
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+        _write_json(Path(output_dir) / "execution-gate.json", blocked)
     return blocked
+
+
+def _output_is_outside_worktree(output_dir, repo_root):
+    root = Path(repo_root).resolve()
+    out = Path(output_dir).expanduser().resolve()
+    return bool(out != root and root not in out.parents)
 
 
 def execute(output_dir, expected_head):
     if not expected_head:
         return _blocked(output_dir, "EXPECTED_HEAD_REQUIRED")
+
+    runtime = runtime_isolation()
+    if not runtime["passed"]:
+        return _blocked(
+            output_dir,
+            "PYTHON_RUNTIME_NOT_ISOLATED",
+            runtime_isolation=runtime,
+            required_python_flags=["-E", "-s", "-S"],
+        )
+
     try:
         identity_before = exact_tree_identity(expected_head)
     except ExecutionGateError as exc:
         return _blocked(output_dir, str(exc), expected_head=expected_head)
+    identity_before["runtime_isolation"] = runtime
+
+    if not _output_is_outside_worktree(output_dir, identity_before["repo_root"]):
+        return _blocked(
+            output_dir,
+            "OUTPUT_DIRECTORY_INSIDE_WORKTREE",
+            persist=False,
+            expected_head=expected_head,
+            repo_root=identity_before["repo_root"],
+            output_dir=str(Path(output_dir).expanduser()),
+        )
 
     compile_result = compile_gate()
     if not compile_result["passed"]:
@@ -232,6 +420,7 @@ def execute(output_dir, expected_head):
             underlying_reason=str(exc), expected_head=expected_head, identity_before=identity_before,
             compile=compile_result, regression=regression_result, reference_replay=reference_replay_result,
         )
+    identity_after_reference["runtime_isolation"] = runtime
     if identity_after_reference != identity_before:
         return _blocked(
             output_dir, "EXECUTION_TREE_CHANGED_AFTER_REFERENCE_REPLAY",
@@ -249,6 +438,7 @@ def execute(output_dir, expected_head):
         "expected_head": expected_head,
         "identity_before": identity_before,
         "identity_after_reference_replay": identity_after_reference,
+        "runtime_isolation": runtime,
         "python_version": sys.version,
         "compile": compile_result,
         "regression": regression_result,
@@ -273,6 +463,7 @@ def execute(output_dir, expected_head):
             compile=compile_result, regression=regression_result,
             reference_replay=reference_replay_result, canonical_bundle_replay=canonical_replay_result,
         )
+    identity_after["runtime_isolation"] = runtime
     if identity_after != identity_before:
         return _blocked(
             output_dir, "EXECUTION_TREE_CHANGED",
@@ -299,7 +490,7 @@ def execute(output_dir, expected_head):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the exact-head DDC gate and v0.9 detector-oracle synthetic reference.")
-    parser.add_argument("--output", required=True, help="Directory for execution evidence. Prefer a path outside the Git worktree.")
+    parser.add_argument("--output", required=True, help="Directory for execution evidence. Must resolve outside the Git worktree.")
     parser.add_argument("--expected-head", required=True, help="Exact DDC-approved implementation commit SHA. Execution fails closed on any other HEAD.")
     args = parser.parse_args()
     result = execute(args.output, args.expected_head)
