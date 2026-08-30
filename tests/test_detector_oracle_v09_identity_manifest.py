@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -22,6 +23,10 @@ class DetectorOracleIdentityManifestTests(unittest.TestCase):
             "files": files,
         }
 
+    def _write_manifest(self, path, value):
+        path.write_text(json.dumps(value), encoding="utf-8")
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
     def test_tree_hash_matches_git_tree_encoding(self):
         self.assertEqual(
             ex._tree_sha([("a.py", "100644", "1" * 40)]),
@@ -32,12 +37,26 @@ class DetectorOracleIdentityManifestTests(unittest.TestCase):
             ex._tree_sha([("a.py", "100644", "2" * 40)]),
         )
 
+    def test_manifest_hash_is_required(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "manifest.json"
+            self._write_manifest(p, self._manifest(td))
+            with self.assertRaisesRegex(ex.ExecutionGateError, "EXPECTED_IDENTITY_MANIFEST_SHA256_REQUIRED"):
+                ex.executable_tree_identity("abc", p, None)
+
+    def test_manifest_hash_mismatch_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "manifest.json"
+            self._write_manifest(p, self._manifest(td))
+            with self.assertRaisesRegex(ex.ExecutionGateError, "IDENTITY_MANIFEST_SHA256_MISMATCH"):
+                ex.executable_tree_identity("abc", p, "0" * 64)
+
     def test_manifest_head_mismatch_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "manifest.json"
-            p.write_text(json.dumps(self._manifest(td, head="other")), encoding="utf-8")
+            sha = self._write_manifest(p, self._manifest(td, head="other"))
             with self.assertRaisesRegex(ex.ExecutionGateError, "IDENTITY_MANIFEST_HEAD_MISMATCH"):
-                ex.executable_tree_identity("approved", p)
+                ex.executable_tree_identity("approved", p, sha)
 
     def test_manifest_rejects_file_set_drift(self):
         with tempfile.TemporaryDirectory() as td:
@@ -48,13 +67,13 @@ class DetectorOracleIdentityManifestTests(unittest.TestCase):
             (root / "tests" / "b.py").write_text("x=2\n", encoding="utf-8")
             (root / "tests" / "extra.py").write_text("x=3\n", encoding="utf-8")
             p = root / "manifest.json"
-            p.write_text(json.dumps(self._manifest(root)), encoding="utf-8")
+            sha = self._write_manifest(p, self._manifest(root))
             old = Path.cwd()
             try:
                 import os
                 os.chdir(root)
                 with self.assertRaisesRegex(ex.ExecutionGateError, "EXECUTABLE_FILE_SET_MISMATCH"):
-                    ex.executable_tree_identity("abc", p)
+                    ex.executable_tree_identity("abc", p, sha)
             finally:
                 os.chdir(old)
 
@@ -66,13 +85,13 @@ class DetectorOracleIdentityManifestTests(unittest.TestCase):
             (root / "lab" / "a.py").write_text("x=1\n", encoding="utf-8")
             (root / "tests" / "b.py").write_text("x=2\n", encoding="utf-8")
             p = root / "manifest.json"
-            p.write_text(json.dumps(self._manifest(root)), encoding="utf-8")
+            sha = self._write_manifest(p, self._manifest(root))
             old = Path.cwd()
             try:
                 import os
                 os.chdir(root)
                 with self.assertRaisesRegex(ex.ExecutionGateError, "EXECUTABLE_BLOB_MISMATCH"):
-                    ex.executable_tree_identity("abc", p)
+                    ex.executable_tree_identity("abc", p, sha)
             finally:
                 os.chdir(old)
 
@@ -81,13 +100,14 @@ class DetectorOracleIdentityManifestTests(unittest.TestCase):
             "identity_mode": "VERIFIED_EXECUTABLE_TREE_MANIFEST",
             "head": "abc", "expected_head": "abc",
             "root_tree_sha": "r", "lab_tree_sha": "l", "tests_tree_sha": "t",
-            "manifest_sha256": "m", "git_blobs": {}, "file_sha256": {},
+            "manifest_sha256": "m", "expected_manifest_sha256": "m",
+            "git_blobs": {}, "file_sha256": {},
         }
         compile_result = {"passed": False, "returncode": 1, "output_sha256": "x"}
         with tempfile.TemporaryDirectory() as td:
             with patch.object(ex, "executable_tree_identity", return_value=identity) as ident, patch.object(ex, "compile_gate", return_value=compile_result):
-                result = ex.execute(td, "abc", "manifest.json")
-            ident.assert_called_once_with("abc", "manifest.json")
+                result = ex.execute(td, "abc", "manifest.json", "manifest-sha")
+            ident.assert_called_once_with("abc", "manifest.json", "manifest-sha")
             self.assertFalse(result["canonical"])
             self.assertEqual(result["reason"], "COMPILE_FAILED")
 
