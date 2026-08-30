@@ -4,6 +4,7 @@ from copy import deepcopy
 from pathlib import Path
 import argparse
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -33,6 +34,23 @@ def _git(args):
     return r["stdout"].strip()
 
 
+def _git_blob_sha(path):
+    r = _run(["git", "hash-object", "--no-filters", str(path)])
+    if r["returncode"] != 0:
+        raise ExecutionGateError("GIT_HASH_OBJECT_FAILED")
+    return r["stdout"].strip()
+
+
+def _tree_sha(entries):
+    body = bytearray()
+    for name, mode, sha in sorted(entries, key=lambda x: x[0].encode("utf-8")):
+        body.extend(f"{mode} {name}".encode("utf-8"))
+        body.append(0)
+        body.extend(bytes.fromhex(sha))
+    header = f"tree {len(body)}".encode("ascii") + b"\0"
+    return hashlib.sha1(header + body).hexdigest()
+
+
 def exact_tree_identity(expected_head=None):
     head = _git(["rev-parse", "HEAD"])
     if expected_head is not None and head != expected_head:
@@ -47,13 +65,79 @@ def exact_tree_identity(expected_head=None):
         "tests/test_detector_oracle_v09.py",
         "tests/test_detector_oracle_v09_evidence.py",
         "tests/test_detector_oracle_v09_execution.py",
+        "tests/test_detector_oracle_v09_ddc_repairs.py",
     )
     blobs = {}
     file_sha256 = {}
     for path in paths:
         blobs[path] = _git(["hash-object", path])
         file_sha256[path] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    return {"head": head, "expected_head": expected_head, "git_blobs": blobs, "file_sha256": file_sha256}
+    return {
+        "identity_mode": "CLEAN_GIT_WORKTREE",
+        "head": head,
+        "expected_head": expected_head,
+        "git_blobs": blobs,
+        "file_sha256": file_sha256,
+    }
+
+
+def executable_tree_identity(expected_head, manifest_path):
+    if not expected_head:
+        raise ExecutionGateError("EXPECTED_HEAD_REQUIRED")
+    manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    if manifest.get("schema") != "altru.dev/detector-oracle/executable-tree-manifest/0.9":
+        raise ExecutionGateError("IDENTITY_MANIFEST_SCHEMA_MISMATCH")
+    if manifest.get("approved_head") != expected_head:
+        raise ExecutionGateError("IDENTITY_MANIFEST_HEAD_MISMATCH")
+
+    expected_files = manifest.get("files")
+    if not isinstance(expected_files, dict) or not expected_files:
+        raise ExecutionGateError("IDENTITY_MANIFEST_FILES_MISSING")
+    actual_paths = sorted(
+        str(p).replace("\\", "/")
+        for root in ("lab", "tests")
+        for p in Path(root).glob("*.py")
+    )
+    if actual_paths != sorted(expected_files):
+        raise ExecutionGateError("EXECUTABLE_FILE_SET_MISMATCH")
+
+    blobs = {}
+    file_sha256 = {}
+    for path in actual_paths:
+        if not Path(path).is_file():
+            raise ExecutionGateError("EXECUTABLE_FILE_MISSING")
+        blob = _git_blob_sha(path)
+        expected_blob = expected_files[path].get("git_blob")
+        if blob != expected_blob:
+            raise ExecutionGateError("EXECUTABLE_BLOB_MISMATCH")
+        blobs[path] = blob
+        file_sha256[path] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+    observed_trees = {}
+    for root, key in (("lab", "lab_tree_sha"), ("tests", "tests_tree_sha")):
+        entries = []
+        for path in actual_paths:
+            p = Path(path)
+            if p.parent.as_posix() != root:
+                continue
+            entries.append((p.name, expected_files[path].get("mode", "100644"), blobs[path]))
+        observed = _tree_sha(entries)
+        expected = manifest.get(key)
+        if observed != expected:
+            raise ExecutionGateError("EXECUTABLE_SUBTREE_MISMATCH")
+        observed_trees[root] = observed
+
+    return {
+        "identity_mode": "VERIFIED_EXECUTABLE_TREE_MANIFEST",
+        "head": expected_head,
+        "expected_head": expected_head,
+        "root_tree_sha": manifest.get("root_tree_sha"),
+        "lab_tree_sha": observed_trees["lab"],
+        "tests_tree_sha": observed_trees["tests"],
+        "manifest_sha256": hashlib.sha256(Path(manifest_path).read_bytes()).hexdigest(),
+        "git_blobs": blobs,
+        "file_sha256": file_sha256,
+    }
 
 
 def compile_gate():
@@ -97,11 +181,6 @@ def _write_json(path, value):
     Path(path).write_text(ev.canonical_json(value) + "\n", encoding="utf-8")
 
 
-def _write_jsonl(path, records):
-    rows = sorted(records, key=ev.canonical_json)
-    Path(path).write_text("\n".join(ev.canonical_json(r) for r in rows) + ("\n" if rows else ""), encoding="utf-8")
-
-
 def finalize_reference(reference, identity, compile_result, regression_result, reference_replay_result, canonical_bundle_replay_passed):
     final = deepcopy(reference)
     summary = final["summary"]
@@ -119,10 +198,7 @@ def finalize_reference(reference, identity, compile_result, regression_result, r
     summary["exact_execution_gate"] = "PASS" if gates_pass else "FAIL"
     summary["classification"] = candidate if gates_pass else "CONTROL_FAILED"
     summary["execution_identity"] = {
-        "head": identity["head"],
-        "expected_head": identity.get("expected_head"),
-        "git_blobs": identity["git_blobs"],
-        "file_sha256": identity["file_sha256"],
+        **identity,
         "python_version": sys.version,
         "python_executable": sys.executable,
     }
@@ -156,6 +232,7 @@ def final_bundle_bytes(reference, execution_record):
         "classification": reference["summary"]["classification"],
         "head": reference["summary"]["execution_identity"]["head"],
         "expected_head": reference["summary"]["execution_identity"].get("expected_head"),
+        "identity_mode": reference["summary"]["execution_identity"].get("identity_mode"),
     }
     payloads["manifest.json"] = (ev.canonical_json(manifest) + "\n").encode("utf-8")
     return payloads
@@ -200,11 +277,17 @@ def _blocked(output_dir, reason, **evidence):
     return blocked
 
 
-def execute(output_dir, expected_head):
+def execute(output_dir, expected_head, identity_manifest=None):
     if not expected_head:
         return _blocked(output_dir, "EXPECTED_HEAD_REQUIRED")
+
+    def identity_check():
+        if identity_manifest:
+            return executable_tree_identity(expected_head, identity_manifest)
+        return exact_tree_identity(expected_head)
+
     try:
-        identity_before = exact_tree_identity(expected_head)
+        identity_before = identity_check()
     except ExecutionGateError as exc:
         return _blocked(output_dir, str(exc), expected_head=expected_head)
 
@@ -225,16 +308,16 @@ def execute(output_dir, expected_head):
         )
 
     try:
-        identity_after_reference = exact_tree_identity(expected_head)
+        identity_after_reference = identity_check()
     except ExecutionGateError as exc:
         return _blocked(
-            output_dir, "EXECUTION_TREE_NOT_CLEAN_AFTER_REFERENCE_REPLAY",
+            output_dir, "EXECUTION_IDENTITY_CHANGED_AFTER_REFERENCE_REPLAY",
             underlying_reason=str(exc), expected_head=expected_head, identity_before=identity_before,
             compile=compile_result, regression=regression_result, reference_replay=reference_replay_result,
         )
     if identity_after_reference != identity_before:
         return _blocked(
-            output_dir, "EXECUTION_TREE_CHANGED_AFTER_REFERENCE_REPLAY",
+            output_dir, "EXECUTION_IDENTITY_CHANGED_AFTER_REFERENCE_REPLAY",
             expected_head=expected_head, identity_before=identity_before, identity_after=identity_after_reference,
             compile=compile_result, regression=regression_result, reference_replay=reference_replay_result,
         )
@@ -265,17 +348,17 @@ def execute(output_dir, expected_head):
         )
 
     try:
-        identity_after = exact_tree_identity(expected_head)
+        identity_after = identity_check()
     except ExecutionGateError as exc:
         return _blocked(
-            output_dir, "EXECUTION_TREE_NOT_CLEAN_AFTER_CANONICAL_REPLAY",
+            output_dir, "EXECUTION_IDENTITY_CHANGED_AFTER_CANONICAL_REPLAY",
             underlying_reason=str(exc), expected_head=expected_head, identity_before=identity_before,
             compile=compile_result, regression=regression_result,
             reference_replay=reference_replay_result, canonical_bundle_replay=canonical_replay_result,
         )
     if identity_after != identity_before:
         return _blocked(
-            output_dir, "EXECUTION_TREE_CHANGED",
+            output_dir, "EXECUTION_IDENTITY_CHANGED",
             expected_head=expected_head, identity_before=identity_before, identity_after=identity_after,
             compile=compile_result, regression=regression_result,
             reference_replay=reference_replay_result, canonical_bundle_replay=canonical_replay_result,
@@ -298,11 +381,12 @@ def execute(output_dir, expected_head):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the exact-head DDC gate and v0.9 detector-oracle synthetic reference.")
-    parser.add_argument("--output", required=True, help="Directory for execution evidence. Prefer a path outside the Git worktree.")
-    parser.add_argument("--expected-head", required=True, help="Exact DDC-approved implementation commit SHA. Execution fails closed on any other HEAD.")
+    parser = argparse.ArgumentParser(description="Run the DDC gate and v0.9 detector-oracle synthetic reference.")
+    parser.add_argument("--output", required=True, help="Directory for execution evidence. Prefer a path outside the executable tree.")
+    parser.add_argument("--expected-head", required=True, help="Exact DDC-approved implementation commit SHA.")
+    parser.add_argument("--identity-manifest", help="Optional DDC-approved executable-tree manifest for environments that cannot materialize a full Git checkout.")
     args = parser.parse_args()
-    result = execute(args.output, args.expected_head)
+    result = execute(args.output, args.expected_head, args.identity_manifest)
     print(ev.canonical_json(result))
     return 0 if result.get("canonical") else 2
 
