@@ -96,7 +96,7 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             with patch.object(ex, "exact_tree_identity", side_effect=[before, after]), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)):
                 result = ex.execute(td, "abc")
             self.assertFalse(result["canonical"])
-            self.assertEqual(result["reason"], "EXECUTION_TREE_CHANGED_AFTER_REFERENCE_REPLAY")
+            self.assertEqual(result["reason"], "EXECUTION_IDENTITY_CHANGED_AFTER_REFERENCE_REPLAY")
             self.assertFalse((ex.Path(td) / "summary.json").exists())
 
     def test_reference_replay_failure_blocks_before_canonical_replay(self):
