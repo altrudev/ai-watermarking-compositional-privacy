@@ -81,10 +81,16 @@ def exact_tree_identity(expected_head=None):
     }
 
 
-def executable_tree_identity(expected_head, manifest_path):
+def executable_tree_identity(expected_head, manifest_path, expected_manifest_sha256):
     if not expected_head:
         raise ExecutionGateError("EXPECTED_HEAD_REQUIRED")
-    manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    if not expected_manifest_sha256:
+        raise ExecutionGateError("EXPECTED_IDENTITY_MANIFEST_SHA256_REQUIRED")
+    manifest_bytes = Path(manifest_path).read_bytes()
+    manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+    if manifest_sha256 != expected_manifest_sha256:
+        raise ExecutionGateError("IDENTITY_MANIFEST_SHA256_MISMATCH")
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
     if manifest.get("schema") != "altru.dev/detector-oracle/executable-tree-manifest/0.9":
         raise ExecutionGateError("IDENTITY_MANIFEST_SCHEMA_MISMATCH")
     if manifest.get("approved_head") != expected_head:
@@ -134,7 +140,8 @@ def executable_tree_identity(expected_head, manifest_path):
         "root_tree_sha": manifest.get("root_tree_sha"),
         "lab_tree_sha": observed_trees["lab"],
         "tests_tree_sha": observed_trees["tests"],
-        "manifest_sha256": hashlib.sha256(Path(manifest_path).read_bytes()).hexdigest(),
+        "manifest_sha256": manifest_sha256,
+        "expected_manifest_sha256": expected_manifest_sha256,
         "git_blobs": blobs,
         "file_sha256": file_sha256,
     }
@@ -277,13 +284,13 @@ def _blocked(output_dir, reason, **evidence):
     return blocked
 
 
-def execute(output_dir, expected_head, identity_manifest=None):
+def execute(output_dir, expected_head, identity_manifest=None, expected_identity_manifest_sha256=None):
     if not expected_head:
         return _blocked(output_dir, "EXPECTED_HEAD_REQUIRED")
 
     def identity_check():
         if identity_manifest:
-            return executable_tree_identity(expected_head, identity_manifest)
+            return executable_tree_identity(expected_head, identity_manifest, expected_identity_manifest_sha256)
         return exact_tree_identity(expected_head)
 
     try:
@@ -385,8 +392,11 @@ def main():
     parser.add_argument("--output", required=True, help="Directory for execution evidence. Prefer a path outside the executable tree.")
     parser.add_argument("--expected-head", required=True, help="Exact DDC-approved implementation commit SHA.")
     parser.add_argument("--identity-manifest", help="Optional DDC-approved executable-tree manifest for environments that cannot materialize a full Git checkout.")
+    parser.add_argument("--expected-identity-manifest-sha256", help="Exact DDC-approved SHA-256 of --identity-manifest; required whenever manifest mode is used.")
     args = parser.parse_args()
-    result = execute(args.output, args.expected_head, args.identity_manifest)
+    if args.identity_manifest and not args.expected_identity_manifest_sha256:
+        parser.error("--expected-identity-manifest-sha256 is required with --identity-manifest")
+    result = execute(args.output, args.expected_head, args.identity_manifest, args.expected_identity_manifest_sha256)
     print(ev.canonical_json(result))
     return 0 if result.get("canonical") else 2
 
