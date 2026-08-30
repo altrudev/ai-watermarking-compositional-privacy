@@ -7,6 +7,7 @@ import hashlib
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -343,14 +344,56 @@ def canonical_bundle_replay(reference, execution_record):
     }
 
 
-def _write_new_bytes(path, data):
-    target = Path(path)
+def _directory_identity(path):
+    st = os.lstat(Path(path))
+    if not stat.S_ISDIR(st.st_mode):
+        raise OSError("output-target-not-directory")
+    return {"device": int(st.st_dev), "inode": int(st.st_ino)}
+
+
+def _same_directory_identity(path, expected):
+    try:
+        return _directory_identity(path) == expected
+    except OSError:
+        return False
+
+
+def _open_output_dir(path, expected_identity):
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(Path(path), flags)
+    st = os.fstat(fd)
+    actual = {"device": int(st.st_dev), "inode": int(st.st_ino)}
+    if not stat.S_ISDIR(st.st_mode) or actual != expected_identity:
+        os.close(fd)
+        raise OSError("output-directory-identity-changed")
+    return fd
+
+
+def _write_new_bytes_at(dir_fd, name, data):
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(target, flags, 0o600)
+    fd = os.open(name, flags, 0o600, dir_fd=dir_fd)
     with os.fdopen(fd, "wb") as stream:
         stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
+
+
+def _read_regular_bytes_at(dir_fd, name):
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(name, flags, dir_fd=dir_fd)
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise OSError("output-member-not-regular-file")
+        chunks = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+    finally:
+        os.close(fd)
 
 
 def _output_target_is_fresh(output_dir):
@@ -360,7 +403,7 @@ def _output_target_is_fresh(output_dir):
     return out.parent.resolve().is_dir()
 
 
-def verify_written_bundle(output_dir, expected_payloads):
+def verify_written_bundle(output_dir, expected_payloads, expected_output_identity=None):
     out = Path(output_dir).expanduser()
     expected_names = set(expected_payloads)
     result = {
@@ -371,32 +414,49 @@ def verify_written_bundle(output_dir, expected_payloads):
         "actual_files": [],
         "file_equal": {},
         "file_sha256": {},
+        "output_identity": None,
+        "output_identity_match": False,
     }
-    if out.is_symlink() or not out.is_dir():
+    identity = _directory_identity(out)
+    result["output_identity"] = identity
+    if expected_output_identity is not None and identity != expected_output_identity:
         return result
-    actual_names = {path.name for path in out.iterdir()}
-    result["actual_files"] = sorted(actual_names)
-    if actual_names != expected_names:
-        return result
-    for name in sorted(expected_names):
-        path = out / name
-        if path.is_symlink() or not path.is_file():
-            result["file_equal"][name] = False
-            continue
-        data = path.read_bytes()
-        result["file_sha256"][name] = hashlib.sha256(data).hexdigest()
-        result["file_equal"][name] = data == expected_payloads[name]
-    result["passed"] = bool(result["file_equal"] and all(result["file_equal"].values()))
+    result["output_identity_match"] = True
+    dir_fd = _open_output_dir(out, identity)
+    try:
+        actual_names = set(os.listdir(dir_fd))
+        result["actual_files"] = sorted(actual_names)
+        if actual_names != expected_names:
+            return result
+        for name in sorted(expected_names):
+            try:
+                data = _read_regular_bytes_at(dir_fd, name)
+            except OSError:
+                result["file_equal"][name] = False
+                continue
+            result["file_sha256"][name] = hashlib.sha256(data).hexdigest()
+            result["file_equal"][name] = data == expected_payloads[name]
+    finally:
+        os.close(dir_fd)
+    result["output_identity_match"] = _same_directory_identity(out, identity)
+    result["passed"] = bool(
+        result["output_identity_match"]
+        and result["file_equal"]
+        and all(result["file_equal"].values())
+    )
     return result
 
 
-def _discard_output_dir(output_dir):
+def _discard_output_dir(output_dir, expected_identity=None):
     out = Path(output_dir).expanduser()
     try:
+        if not (out.exists() or out.is_symlink()):
+            return True
+        if expected_identity is not None and not _same_directory_identity(out, expected_identity):
+            return False
         if out.is_symlink():
-            out.unlink()
-        elif out.exists():
-            shutil.rmtree(out)
+            return False
+        shutil.rmtree(out)
         return not (out.exists() or out.is_symlink())
     except OSError:
         return False
@@ -405,12 +465,25 @@ def _discard_output_dir(output_dir):
 def write_final_bundle(output_dir, reference, execution_record, payloads=None):
     out = Path(output_dir).expanduser()
     out.mkdir(mode=0o700, parents=False, exist_ok=False)
+    output_identity = _directory_identity(out)
     payloads = final_bundle_bytes(reference, execution_record) if payloads is None else payloads
-    for name, data in payloads.items():
-        _write_new_bytes(out / name, data)
+    try:
+        dir_fd = _open_output_dir(out, output_identity)
+        try:
+            for name, data in payloads.items():
+                _write_new_bytes_at(dir_fd, name, data)
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+        if not _same_directory_identity(out, output_identity):
+            raise OSError("output-directory-identity-changed-after-write")
+    except OSError:
+        _discard_output_dir(out, output_identity)
+        raise
     manifest_sha256 = hashlib.sha256(payloads["manifest.json"]).hexdigest()
     return {
         "output_dir": str(out),
+        "output_identity": output_identity,
         "manifest_sha256": manifest_sha256,
         "canonical": bool(reference["summary"]["exact_execution_gate"] == "PASS"),
         "classification": reference["summary"]["classification"],
@@ -419,9 +492,21 @@ def write_final_bundle(output_dir, reference, execution_record, payloads=None):
 
 def _blocked(output_dir, reason, persist=True, **evidence):
     blocked = {"status": "BLOCKED", "reason": reason, "canonical": False, **evidence}
+    blocked["evidence_persisted"] = False
     if persist:
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        _write_json(Path(output_dir) / "execution-gate.json", blocked)
+        out = Path(output_dir).expanduser()
+        try:
+            out.mkdir(mode=0o700, parents=False, exist_ok=False)
+            output_identity = _directory_identity(out)
+            dir_fd = _open_output_dir(out, output_identity)
+            try:
+                _write_new_bytes_at(dir_fd, "execution-gate.json", (ev.canonical_json(blocked) + "\n").encode("utf-8"))
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+            blocked["evidence_persisted"] = _same_directory_identity(out, output_identity)
+        except OSError:
+            blocked["evidence_persisted"] = False
     return blocked
 
 
@@ -433,13 +518,14 @@ def _output_is_outside_worktree(output_dir, repo_root):
 
 def execute(output_dir, expected_head):
     if not expected_head:
-        return _blocked(output_dir, "EXPECTED_HEAD_REQUIRED")
+        return _blocked(output_dir, "EXPECTED_HEAD_REQUIRED", persist=False)
 
     runtime = runtime_isolation()
     if not runtime["passed"]:
         return _blocked(
             output_dir,
             "PYTHON_RUNTIME_NOT_ISOLATED",
+            persist=False,
             runtime_isolation=runtime,
             required_python_flags=["-E", "-s", "-S"],
         )
@@ -447,7 +533,7 @@ def execute(output_dir, expected_head):
     try:
         identity_before = exact_tree_identity(expected_head)
     except ExecutionGateError as exc:
-        return _blocked(output_dir, str(exc), expected_head=expected_head)
+        return _blocked(output_dir, str(exc), persist=False, expected_head=expected_head)
     identity_before["runtime_isolation"] = runtime
 
     if not _output_is_outside_worktree(output_dir, identity_before["repo_root"]):
@@ -553,14 +639,23 @@ def execute(output_dir, expected_head):
     try:
         result = write_final_bundle(output_dir, final, execution_record, payloads=expected_payloads)
     except OSError as exc:
-        discarded = _discard_output_dir(output_dir)
         return _blocked(
             output_dir, "FINAL_WRITE_FAILED", persist=False, expected_head=expected_head,
-            write_error=f"{type(exc).__name__}:{exc}", output_discarded=discarded,
+            write_error=f"{type(exc).__name__}:{exc}",
+            output_path_present_after_failure=bool(Path(output_dir).exists() or Path(output_dir).is_symlink()),
             canonical_bundle_replay=canonical_replay_result,
         )
 
-    written = verify_written_bundle(output_dir, expected_payloads)
+    output_identity = result["output_identity"]
+    try:
+        written = verify_written_bundle(output_dir, expected_payloads, expected_output_identity=output_identity)
+    except OSError as exc:
+        discarded = _discard_output_dir(output_dir, output_identity)
+        return _blocked(
+            output_dir, "FINAL_WRITE_VERIFICATION_FAILED", persist=False, expected_head=expected_head,
+            verification_error=f"{type(exc).__name__}:{exc}", output_discarded=discarded,
+            canonical_bundle_replay=canonical_replay_result,
+        )
     replay_hash_match = bool(
         written["passed"]
         and all(
@@ -571,7 +666,7 @@ def execute(output_dir, expected_head):
     written["canonical_replay_sha256_match"] = replay_hash_match
     written["passed"] = bool(written["passed"] and replay_hash_match)
     if not written["passed"]:
-        discarded = _discard_output_dir(output_dir)
+        discarded = _discard_output_dir(output_dir, output_identity)
         return _blocked(
             output_dir, "FINAL_WRITE_DIVERGED_FROM_CANONICAL_REPLAY", persist=False,
             expected_head=expected_head, written_bundle_verification=written,
@@ -581,7 +676,7 @@ def execute(output_dir, expected_head):
     try:
         identity_after_write = exact_tree_identity(expected_head)
     except ExecutionGateError as exc:
-        discarded = _discard_output_dir(output_dir)
+        discarded = _discard_output_dir(output_dir, output_identity)
         return _blocked(
             output_dir, "EXECUTION_TREE_NOT_CLEAN_AFTER_FINAL_WRITE", persist=False,
             underlying_reason=str(exc), expected_head=expected_head, identity_before=identity_before,
@@ -590,12 +685,20 @@ def execute(output_dir, expected_head):
         )
     identity_after_write["runtime_isolation"] = runtime
     if identity_after_write != identity_before:
-        discarded = _discard_output_dir(output_dir)
+        discarded = _discard_output_dir(output_dir, output_identity)
         return _blocked(
             output_dir, "EXECUTION_TREE_CHANGED_AFTER_FINAL_WRITE", persist=False,
             expected_head=expected_head, identity_before=identity_before, identity_after=identity_after_write,
             written_bundle_verification=written, output_discarded=discarded,
             canonical_bundle_replay=canonical_replay_result,
+        )
+
+    if not _same_directory_identity(output_dir, output_identity):
+        discarded = _discard_output_dir(output_dir, output_identity)
+        return _blocked(
+            output_dir, "OUTPUT_DIRECTORY_IDENTITY_CHANGED_AFTER_FINAL_WRITE", persist=False,
+            expected_head=expected_head, output_identity=output_identity,
+            output_discarded=discarded, canonical_bundle_replay=canonical_replay_result,
         )
 
     result["canonical_bundle_replay"] = canonical_replay_result
