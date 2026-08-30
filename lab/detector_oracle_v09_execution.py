@@ -187,7 +187,7 @@ def _controlled_python_env(pycache_prefix):
 
 
 def compile_gate():
-    files = sorted(str(p) for root in EXECUTED_ROOTS for p in Path(root).glob("*.py"))
+    files = sorted(str(p) for root in EXECUTED_ROOTS for p in Path(root).rglob("*.py") if p.is_file())
     if not files:
         raise ExecutionGateError("NO_PYTHON_FILES")
     with tempfile.TemporaryDirectory(prefix="v09-compile-cache-") as cache:
@@ -222,7 +222,12 @@ def regression_gate():
         "pythonhashseed": "0",
     }
     result["test_count"] = int(m.group(1)) if m else None
-    result["passed"] = bool(result["returncode"] == 0 and re.search(r"\bOK\b", combined))
+    result["passed"] = bool(
+        result["returncode"] == 0
+        and result["test_count"] is not None
+        and result["test_count"] > 0
+        and re.search(r"\bOK\b", combined)
+    )
     return result
 
 
@@ -338,12 +343,71 @@ def canonical_bundle_replay(reference, execution_record):
     }
 
 
-def write_final_bundle(output_dir, reference, execution_record):
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    payloads = final_bundle_bytes(reference, execution_record)
+def _write_new_bytes(path, data):
+    target = Path(path)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(target, flags, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _output_target_is_fresh(output_dir):
+    out = Path(output_dir).expanduser()
+    if out.exists() or out.is_symlink():
+        return False
+    return out.parent.resolve().is_dir()
+
+
+def verify_written_bundle(output_dir, expected_payloads):
+    out = Path(output_dir).expanduser()
+    expected_names = set(expected_payloads)
+    result = {
+        "passed": False,
+        "control": "WRITTEN_BUNDLE_BYTE_IDENTITY",
+        "output_dir": str(out),
+        "expected_files": sorted(expected_names),
+        "actual_files": [],
+        "file_equal": {},
+        "file_sha256": {},
+    }
+    if out.is_symlink() or not out.is_dir():
+        return result
+    actual_names = {path.name for path in out.iterdir()}
+    result["actual_files"] = sorted(actual_names)
+    if actual_names != expected_names:
+        return result
+    for name in sorted(expected_names):
+        path = out / name
+        if path.is_symlink() or not path.is_file():
+            result["file_equal"][name] = False
+            continue
+        data = path.read_bytes()
+        result["file_sha256"][name] = hashlib.sha256(data).hexdigest()
+        result["file_equal"][name] = data == expected_payloads[name]
+    result["passed"] = bool(result["file_equal"] and all(result["file_equal"].values()))
+    return result
+
+
+def _discard_output_dir(output_dir):
+    out = Path(output_dir).expanduser()
+    try:
+        if out.is_symlink():
+            out.unlink()
+        elif out.exists():
+            shutil.rmtree(out)
+        return not (out.exists() or out.is_symlink())
+    except OSError:
+        return False
+
+
+def write_final_bundle(output_dir, reference, execution_record, payloads=None):
+    out = Path(output_dir).expanduser()
+    out.mkdir(mode=0o700, parents=False, exist_ok=False)
+    payloads = final_bundle_bytes(reference, execution_record) if payloads is None else payloads
     for name, data in payloads.items():
-        (out / name).write_bytes(data)
+        _write_new_bytes(out / name, data)
     manifest_sha256 = hashlib.sha256(payloads["manifest.json"]).hexdigest()
     return {
         "output_dir": str(out),
@@ -393,6 +457,15 @@ def execute(output_dir, expected_head):
             persist=False,
             expected_head=expected_head,
             repo_root=identity_before["repo_root"],
+            requested_output_dir=str(Path(output_dir).expanduser()),
+        )
+
+    if not _output_target_is_fresh(output_dir):
+        return _blocked(
+            output_dir,
+            "OUTPUT_TARGET_NOT_FRESH",
+            persist=False,
+            expected_head=expected_head,
             requested_output_dir=str(Path(output_dir).expanduser()),
         )
 
@@ -476,21 +549,65 @@ def execute(output_dir, expected_head):
         candidate_reference, identity_before, compile_result, regression_result,
         reference_replay_result, canonical_replay_result["passed"],
     )
-    result = write_final_bundle(output_dir, final, execution_record)
-    final_payloads = final_bundle_bytes(final, execution_record)
-    if any(hashlib.sha256(final_payloads[name]).hexdigest() != canonical_replay_result["first_file_sha256"][name] for name in final_payloads):
+    expected_payloads = final_bundle_bytes(final, execution_record)
+    try:
+        result = write_final_bundle(output_dir, final, execution_record, payloads=expected_payloads)
+    except OSError as exc:
+        discarded = _discard_output_dir(output_dir)
         return _blocked(
-            output_dir, "FINAL_WRITE_DIVERGED_FROM_CANONICAL_REPLAY", expected_head=expected_head,
+            output_dir, "FINAL_WRITE_FAILED", persist=False, expected_head=expected_head,
+            write_error=f"{type(exc).__name__}:{exc}", output_discarded=discarded,
             canonical_bundle_replay=canonical_replay_result,
         )
+
+    written = verify_written_bundle(output_dir, expected_payloads)
+    replay_hash_match = bool(
+        written["passed"]
+        and all(
+            written["file_sha256"].get(name) == canonical_replay_result["first_file_sha256"].get(name)
+            for name in expected_payloads
+        )
+    )
+    written["canonical_replay_sha256_match"] = replay_hash_match
+    written["passed"] = bool(written["passed"] and replay_hash_match)
+    if not written["passed"]:
+        discarded = _discard_output_dir(output_dir)
+        return _blocked(
+            output_dir, "FINAL_WRITE_DIVERGED_FROM_CANONICAL_REPLAY", persist=False,
+            expected_head=expected_head, written_bundle_verification=written,
+            output_discarded=discarded, canonical_bundle_replay=canonical_replay_result,
+        )
+
+    try:
+        identity_after_write = exact_tree_identity(expected_head)
+    except ExecutionGateError as exc:
+        discarded = _discard_output_dir(output_dir)
+        return _blocked(
+            output_dir, "EXECUTION_TREE_NOT_CLEAN_AFTER_FINAL_WRITE", persist=False,
+            underlying_reason=str(exc), expected_head=expected_head, identity_before=identity_before,
+            written_bundle_verification=written, output_discarded=discarded,
+            canonical_bundle_replay=canonical_replay_result,
+        )
+    identity_after_write["runtime_isolation"] = runtime
+    if identity_after_write != identity_before:
+        discarded = _discard_output_dir(output_dir)
+        return _blocked(
+            output_dir, "EXECUTION_TREE_CHANGED_AFTER_FINAL_WRITE", persist=False,
+            expected_head=expected_head, identity_before=identity_before, identity_after=identity_after_write,
+            written_bundle_verification=written, output_discarded=discarded,
+            canonical_bundle_replay=canonical_replay_result,
+        )
+
     result["canonical_bundle_replay"] = canonical_replay_result
+    result["written_bundle_verification"] = written
+    result["identity_after_write"] = identity_after_write
     result["status"] = "PASS" if result["canonical"] else "BLOCKED"
     return result
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run the exact-head DDC gate and v0.9 detector-oracle synthetic reference.")
-    parser.add_argument("--output", required=True, help="Directory for execution evidence. Must resolve outside the Git worktree.")
+    parser.add_argument("--output", required=True, help="Fresh, non-existing directory for execution evidence; its parent must exist and it must resolve outside the Git worktree.")
     parser.add_argument("--expected-head", required=True, help="Exact DDC-approved implementation commit SHA. Execution fails closed on any other HEAD.")
     args = parser.parse_args()
     result = execute(args.output, args.expected_head)
