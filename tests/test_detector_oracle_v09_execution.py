@@ -1,6 +1,10 @@
+import hashlib
+import json
 import os
 from pathlib import Path
+import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -335,6 +339,55 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             self.assertEqual(result["reason"], "EXECUTION_TREE_CHANGED_AFTER_FINAL_WRITE")
             self.assertTrue(result["output_discarded"])
             self.assertFalse(output.exists())
+
+    def test_full_v01_v09_regression_closure(self):
+        if os.environ.get("DDC_V09_FULL_REGRESSION_CHILD") == "1":
+            self.skipTest("nested full-regression closure guard")
+
+        expected_core_modules = {
+            "test_cross_family_replication_diagnostics.py",
+            "test_cross_family_replication_lab.py",
+            "test_detector_oracle_v09.py",
+            "test_detector_oracle_v09_ddc_repairs.py",
+            "test_detector_oracle_v09_evidence.py",
+            "test_detector_oracle_v09_execution.py",
+            "test_detector_oracle_v09_publication_races.py",
+            "test_noncommutativity_lab.py",
+            "test_open_set_attribution_v08.py",
+            "test_path_dependence_lab.py",
+            "test_robustness_lab.py",
+            "test_text_unlinkability_lab.py",
+            "test_transformation_chain_lab.py",
+            "test_unlinkability_lab.py",
+        }
+        actual_modules = sorted(p.name for p in Path("tests").glob("test_*.py") if p.is_file())
+        self.assertTrue(expected_core_modules.issubset(set(actual_modules)))
+
+        with tempfile.TemporaryDirectory(prefix="v09-full-regression-cache-") as cache:
+            env = ex._controlled_python_env(cache)
+            env["DDC_V09_FULL_REGRESSION_CHILD"] = "1"
+            proc = subprocess.run(
+                [sys.executable, "-E", "-s", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=180,
+            )
+        combined = proc.stdout + proc.stderr
+        match = re.search(r"Ran\s+(\d+)\s+tests?", combined)
+        self.assertIsNotNone(match, combined[-8000:])
+        test_count = int(match.group(1))
+        self.assertGreater(test_count, 0)
+        self.assertEqual(proc.returncode, 0, combined[-8000:])
+        self.assertRegex(combined, r"\bOK\b")
+
+        module_manifest = json.dumps(actual_modules, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+        module_sha256 = hashlib.sha256(module_manifest).hexdigest()
+        output_sha256 = hashlib.sha256(combined.encode("utf-8")).hexdigest()
+        print(f"DDC_FULL_REGRESSION_TESTS={test_count}")
+        print(f"DDC_FULL_REGRESSION_MODULES={len(actual_modules)}")
+        print(f"DDC_FULL_REGRESSION_MODULES_SHA256={module_sha256}")
+        print(f"DDC_FULL_REGRESSION_OUTPUT_SHA256={output_sha256}")
 
 
 if __name__ == "__main__":
