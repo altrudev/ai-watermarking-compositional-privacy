@@ -492,21 +492,27 @@ def write_final_bundle(output_dir, reference, execution_record, payloads=None):
 
 def _blocked(output_dir, reason, persist=True, **evidence):
     blocked = {"status": "BLOCKED", "reason": reason, "canonical": False, **evidence}
-    blocked["evidence_persisted"] = False
-    if persist:
-        out = Path(output_dir).expanduser()
+    if not persist:
+        blocked["evidence_persisted"] = False
+        return blocked
+
+    out = Path(output_dir).expanduser()
+    try:
+        out.mkdir(mode=0o700, parents=False, exist_ok=False)
+        output_identity = _directory_identity(out)
+        persisted = {**blocked, "evidence_persisted": True}
+        dir_fd = _open_output_dir(out, output_identity)
         try:
-            out.mkdir(mode=0o700, parents=False, exist_ok=False)
-            output_identity = _directory_identity(out)
-            dir_fd = _open_output_dir(out, output_identity)
-            try:
-                _write_new_bytes_at(dir_fd, "execution-gate.json", (ev.canonical_json(blocked) + "\n").encode("utf-8"))
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
-            blocked["evidence_persisted"] = _same_directory_identity(out, output_identity)
-        except OSError:
-            blocked["evidence_persisted"] = False
+            _write_new_bytes_at(dir_fd, "execution-gate.json", (ev.canonical_json(persisted) + "\n").encode("utf-8"))
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+        if _same_directory_identity(out, output_identity):
+            return persisted
+    except OSError:
+        pass
+
+    blocked["evidence_persisted"] = False
     return blocked
 
 
