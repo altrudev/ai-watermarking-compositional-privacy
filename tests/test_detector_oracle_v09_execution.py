@@ -42,6 +42,20 @@ def _make_repo(td):
     return root, _run_git(root, "rev-parse", "HEAD")
 
 
+def _runtime_pass():
+    return {"ignore_environment": True, "no_user_site": True, "no_site": True, "passed": True}
+
+
+def _identity(repo_root="/definitely-not-output", blob="1", file_hash="a"):
+    return {
+        "head": "abc",
+        "expected_head": "abc",
+        "repo_root": repo_root,
+        "git_blobs": {"x": blob},
+        "file_sha256": {"x": file_hash},
+    }
+
+
 class DetectorOracleExecutionGateTests(unittest.TestCase):
     def test_dirty_worktree_blocks_identity(self):
         with patch.object(ex, "_git", side_effect=[str(Path.cwd()), "abc123", " M lab/detector_oracle_v09.py"]):
@@ -116,6 +130,31 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             self.assertTrue(result["passed"])
             self.assertFalse(any(root.rglob("__pycache__")))
 
+    def test_compile_gate_recurses_into_nested_python(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "lab").mkdir()
+            (root / "tests" / "nested").mkdir(parents=True)
+            (root / "lab" / "a.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (root / "tests" / "nested" / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+            with _Chdir(root):
+                result = ex.compile_gate()
+            self.assertFalse(result["passed"])
+            self.assertFalse(any(root.rglob("__pycache__")))
+
+    def test_regression_gate_rejects_zero_discovered_tests(self):
+        fake = {
+            "args": [],
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "----------------------------------------------------------------------\nRan 0 tests in 0.000s\n\nOK\n",
+            "output_sha256": "x",
+        }
+        with patch.object(ex, "_run", return_value=fake):
+            result = ex.regression_gate()
+        self.assertEqual(result["test_count"], 0)
+        self.assertFalse(result["passed"])
+
     def test_execute_requires_expected_head(self):
         with tempfile.TemporaryDirectory() as td:
             result = ex.execute(td, None)
@@ -135,11 +174,42 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             root = Path(td)
             output = root / "evidence"
             identity = {"head": "abc", "expected_head": "abc", "repo_root": str(root), "git_blobs": {}, "file_sha256": {}}
-            with patch.object(ex, "runtime_isolation", return_value={"ignore_environment": True, "no_user_site": True, "no_site": True, "passed": True}), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate") as compile_gate:
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate") as compile_gate:
                 result = ex.execute(output, "abc")
             compile_gate.assert_not_called()
             self.assertEqual(result["reason"], "OUTPUT_DIRECTORY_INSIDE_WORKTREE")
             self.assertFalse(output.exists())
+
+    def test_output_target_must_be_fresh_before_compile(self):
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / "evidence"
+            output.mkdir()
+            identity = _identity()
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate") as compile_gate:
+                result = ex.execute(output, "abc")
+            compile_gate.assert_not_called()
+            self.assertEqual(result["reason"], "OUTPUT_TARGET_NOT_FRESH")
+            self.assertTrue(output.exists())
+
+    def test_verify_written_bundle_detects_disk_tamper(self):
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "bundle"
+            out.mkdir()
+            (out / "a.bin").write_bytes(b"changed")
+            verification = ex.verify_written_bundle(out, {"a.bin": b"expected"})
+        self.assertFalse(verification["passed"])
+        self.assertFalse(verification["file_equal"]["a.bin"])
+
+    def test_verify_written_bundle_rejects_symlink_member(self):
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "bundle"
+            out.mkdir()
+            target = Path(td) / "target.bin"
+            target.write_bytes(b"expected")
+            (out / "a.bin").symlink_to(target)
+            verification = ex.verify_written_bundle(out, {"a.bin": b"expected"})
+        self.assertFalse(verification["passed"])
+        self.assertFalse(verification["file_equal"]["a.bin"])
 
     def test_finalize_requires_reference_and_canonical_replay(self):
         ref = {
@@ -183,20 +253,22 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
         identity = {"head": "abc", "expected_head": "abc", "repo_root": "/definitely-not-output", "git_blobs": {}, "file_sha256": {}}
         compile_result = {"passed": False, "returncode": 1, "output_sha256": "x"}
         with tempfile.TemporaryDirectory() as td:
-            with patch.object(ex, "runtime_isolation", return_value={"ignore_environment": True, "no_user_site": True, "no_site": True, "passed": True}), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate", return_value=compile_result):
-                result = ex.execute(td, "abc")
+            output = Path(td) / "evidence"
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate", return_value=compile_result):
+                result = ex.execute(output, "abc")
             self.assertFalse(result["canonical"])
             self.assertEqual(result["reason"], "COMPILE_FAILED")
-            self.assertTrue((ex.Path(td) / "execution-gate.json").exists())
-            self.assertFalse((ex.Path(td) / "summary.json").exists())
+            self.assertTrue((output / "execution-gate.json").exists())
+            self.assertFalse((output / "summary.json").exists())
 
     def test_regression_failure_cannot_reach_replay(self):
         identity = {"head": "abc", "expected_head": "abc", "repo_root": "/definitely-not-output", "git_blobs": {}, "file_sha256": {}}
         compile_result = {"passed": True, "returncode": 0, "output_sha256": "c"}
         regression_result = {"passed": False, "returncode": 1, "test_count": 1, "output_sha256": "t"}
         with tempfile.TemporaryDirectory() as td:
-            with patch.object(ex, "runtime_isolation", return_value={"ignore_environment": True, "no_user_site": True, "no_site": True, "passed": True}), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate") as replay:
-                result = ex.execute(td, "abc")
+            output = Path(td) / "evidence"
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate") as replay:
+                result = ex.execute(output, "abc")
             replay.assert_not_called()
             self.assertFalse(result["canonical"])
             self.assertEqual(result["reason"], "REGRESSION_FAILED")
@@ -212,11 +284,12 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             "represented_evidence": [], "unknown_evidence": [], "comparisons": [], "m5": [],
         }
         with tempfile.TemporaryDirectory() as td:
-            with patch.object(ex, "runtime_isolation", return_value={"ignore_environment": True, "no_user_site": True, "no_site": True, "passed": True}), patch.object(ex, "exact_tree_identity", side_effect=[before, after]), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)):
-                result = ex.execute(td, "abc")
+            output = Path(td) / "evidence"
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", side_effect=[before, after]), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)):
+                result = ex.execute(output, "abc")
             self.assertFalse(result["canonical"])
             self.assertEqual(result["reason"], "EXECUTION_TREE_CHANGED_AFTER_REFERENCE_REPLAY")
-            self.assertFalse((ex.Path(td) / "summary.json").exists())
+            self.assertFalse((output / "summary.json").exists())
 
     def test_reference_replay_failure_blocks_before_canonical_replay(self):
         identity = {"head": "abc", "expected_head": "abc", "repo_root": "/definitely-not-output", "git_blobs": {}, "file_sha256": {}}
@@ -228,11 +301,40 @@ class DetectorOracleExecutionGateTests(unittest.TestCase):
             "represented_evidence": [], "unknown_evidence": [], "comparisons": [], "m5": [],
         }
         with tempfile.TemporaryDirectory() as td:
-            with patch.object(ex, "runtime_isolation", return_value={"ignore_environment": True, "no_user_site": True, "no_site": True, "passed": True}), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)), patch.object(ex, "canonical_bundle_replay") as canonical:
-                result = ex.execute(td, "abc")
+            output = Path(td) / "evidence"
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", return_value=identity), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)), patch.object(ex, "canonical_bundle_replay") as canonical:
+                result = ex.execute(output, "abc")
             canonical.assert_not_called()
             self.assertEqual(result["reason"], "REFERENCE_REPLAY_FAILED")
             self.assertFalse(result["canonical"])
+
+    def test_tree_drift_after_final_write_blocks_and_discards_bundle(self):
+        before = _identity()
+        drifted = _identity(blob="2", file_hash="b")
+        compile_result = {"passed": True, "returncode": 0, "output_sha256": "c"}
+        regression_result = {"passed": True, "returncode": 0, "test_count": 10, "output_sha256": "t"}
+        replay_result = {
+            "passed": True,
+            "first_complete_manifest_sha256": "r",
+            "second_complete_manifest_sha256": "r",
+            "equal_files": {},
+        }
+        ref = {
+            "summary": {
+                "classification": "PENDING_EXACT_EXECUTION_GATE",
+                "candidate_classification_before_execution_gate": "NO_PREDECLARED_EFFECT_ESTABLISHED",
+            },
+            "represented_evidence": [], "unknown_evidence": [], "comparisons": [], "m5": [],
+        }
+        identities = [dict(before), dict(before), dict(before), dict(drifted)]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / "evidence"
+            with patch.object(ex, "runtime_isolation", return_value=_runtime_pass()), patch.object(ex, "exact_tree_identity", side_effect=identities), patch.object(ex, "compile_gate", return_value=compile_result), patch.object(ex, "regression_gate", return_value=regression_result), patch.object(ex, "replay_gate", return_value=(replay_result, ref)):
+                result = ex.execute(output, "abc")
+            self.assertFalse(result["canonical"])
+            self.assertEqual(result["reason"], "EXECUTION_TREE_CHANGED_AFTER_FINAL_WRITE")
+            self.assertTrue(result["output_discarded"])
+            self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":
