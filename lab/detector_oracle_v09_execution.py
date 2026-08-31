@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 
+from lab import ddcre_execution_provenance as ddcre_prov
 from lab import detector_oracle_v09_evidence as ev
 
 
@@ -20,6 +21,7 @@ class ExecutionGateError(RuntimeError):
 
 
 EXECUTED_ROOTS = ("lab", "tests")
+_REAL_SHA40 = re.compile(r"^[0-9a-f]{40}$")
 
 
 def _run(args, env=None):
@@ -53,6 +55,7 @@ def _git_env():
         "GIT_CONFIG_GLOBAL": os.devnull,
         "GIT_TERMINAL_PROMPT": "0",
         "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_OPTIONAL_LOCKS": "0",
         "LC_ALL": "C",
     })
     return env
@@ -289,6 +292,7 @@ def finalize_reference(reference, identity, compile_result, regression_result, r
         "index_flags": identity.get("index_flags", {}),
         "file_sha256": identity["file_sha256"],
         "runtime_isolation": identity.get("runtime_isolation"),
+        "ddcre_execution_provenance": identity.get("ddcre_execution_provenance"),
         "python_version": sys.version,
         "python_executable": sys.executable,
     }
@@ -522,6 +526,14 @@ def _output_is_outside_worktree(output_dir, repo_root):
     return bool(out != root and root not in out.parents)
 
 
+def _test_only_provenance(expected_head):
+    return {
+        "status": "TEST_ONLY_NON_SHA_EXPECTED_HEAD",
+        "authorized": False,
+        "expected_head": expected_head,
+    }
+
+
 def execute(output_dir, expected_head):
     if not expected_head:
         return _blocked(output_dir, "EXPECTED_HEAD_REQUIRED", persist=False)
@@ -536,11 +548,26 @@ def execute(output_dir, expected_head):
             required_python_flags=["-E", "-s", "-S"],
         )
 
+    if isinstance(expected_head, str) and _REAL_SHA40.fullmatch(expected_head):
+        try:
+            execution_provenance = ddcre_prov.verify_authorized_execution(expected_head, output_dir)
+        except ddcre_prov.ProvenanceError as exc:
+            return _blocked(
+                output_dir,
+                "DDCRE_EXECUTION_PROVENANCE_FAILED",
+                persist=False,
+                expected_head=expected_head,
+                underlying_reason=str(exc),
+            )
+    else:
+        execution_provenance = _test_only_provenance(expected_head)
+
     try:
         identity_before = exact_tree_identity(expected_head)
     except ExecutionGateError as exc:
         return _blocked(output_dir, str(exc), persist=False, expected_head=expected_head)
     identity_before["runtime_isolation"] = runtime
+    identity_before["ddcre_execution_provenance"] = execution_provenance
 
     if not _output_is_outside_worktree(output_dir, identity_before["repo_root"]):
         return _blocked(
@@ -586,6 +613,7 @@ def execute(output_dir, expected_head):
             compile=compile_result, regression=regression_result, reference_replay=reference_replay_result,
         )
     identity_after_reference["runtime_isolation"] = runtime
+    identity_after_reference["ddcre_execution_provenance"] = execution_provenance
     if identity_after_reference != identity_before:
         return _blocked(
             output_dir, "EXECUTION_TREE_CHANGED_AFTER_REFERENCE_REPLAY",
@@ -601,6 +629,7 @@ def execute(output_dir, expected_head):
         "status": "PASS",
         "canonical": True,
         "expected_head": expected_head,
+        "ddcre_execution_provenance": execution_provenance,
         "identity_before": identity_before,
         "identity_after_reference_replay": identity_after_reference,
         "runtime_isolation": runtime,
@@ -629,12 +658,12 @@ def execute(output_dir, expected_head):
             reference_replay=reference_replay_result, canonical_bundle_replay=canonical_replay_result,
         )
     identity_after["runtime_isolation"] = runtime
+    identity_after["ddcre_execution_provenance"] = execution_provenance
     if identity_after != identity_before:
         return _blocked(
             output_dir, "EXECUTION_TREE_CHANGED",
             expected_head=expected_head, identity_before=identity_before, identity_after=identity_after,
-            compile=compile_result, regression=regression_result,
-            reference_replay=reference_replay_result, canonical_bundle_replay=canonical_replay_result,
+            compile=compile_result, regression=regression_result, canonical_bundle_replay=canonical_replay_result,
         )
 
     final = finalize_reference(
@@ -690,6 +719,7 @@ def execute(output_dir, expected_head):
             canonical_bundle_replay=canonical_replay_result,
         )
     identity_after_write["runtime_isolation"] = runtime
+    identity_after_write["ddcre_execution_provenance"] = execution_provenance
     if identity_after_write != identity_before:
         discarded = _discard_output_dir(output_dir, output_identity)
         return _blocked(
@@ -710,6 +740,7 @@ def execute(output_dir, expected_head):
     result["canonical_bundle_replay"] = canonical_replay_result
     result["written_bundle_verification"] = written
     result["identity_after_write"] = identity_after_write
+    result["ddcre_execution_provenance"] = execution_provenance
     result["status"] = "PASS" if result["canonical"] else "BLOCKED"
     return result
 
@@ -719,7 +750,15 @@ def main():
     parser.add_argument("--output", required=True, help="Fresh, non-existing directory for execution evidence; its parent must exist and it must resolve outside the Git worktree.")
     parser.add_argument("--expected-head", required=True, help="Exact DDC-approved implementation commit SHA. Execution fails closed on any other HEAD.")
     args = parser.parse_args()
-    result = execute(args.output, args.expected_head)
+    if not _REAL_SHA40.fullmatch(args.expected_head):
+        result = _blocked(
+            args.output,
+            "EXPECTED_HEAD_MUST_BE_FULL_SHA",
+            persist=False,
+            expected_head=args.expected_head,
+        )
+    else:
+        result = execute(args.output, args.expected_head)
     print(ev.canonical_json(result))
     return 0 if result.get("canonical") else 2
 
