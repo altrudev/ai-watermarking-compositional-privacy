@@ -26,6 +26,11 @@ EXPECTED_PROFILE = "watermarking.detector_oracle_hardening"
 EXPECTED_ENTRYPOINT = "lab.detector_oracle_v09_execution:execute"
 EXPECTED_ACTION = "research.detector_oracle_v09.execute_canonical"
 EXPECTED_AUTHORITY = "BOUNDED_CANONICAL_RESEARCH_EXECUTE"
+EXPECTED_PREEXECUTION_GATES = {
+    "complete_regression": "PASS",
+    "ddc_verification": "PASS",
+    "source_identity_stable": "PASS",
+}
 PROVENANCE_PATH = Path("/run/ddcre/execution-provenance.json")
 PUBLIC_KEY_PATH = Path("/run/ddcre/result-signing.pub")
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -213,6 +218,7 @@ def verify_authorized_execution(expected_head: str, output_dir: str | Path) -> d
         "action", "authority_class", "repository", "source_repository", "authorized_ref",
         "revision", "tree_sha", "source_manifest_sha256", "tracked_files",
         "source_directory_identity", "output_parent_identity", "profile", "entrypoint",
+        "preexecution_gates", "complete_regression_sha256", "ddc_verification_sha256",
     }
     if set(payload) != required:
         raise ProvenanceError("DDCRE_PROVENANCE_PAYLOAD_FIELDS_INVALID")
@@ -236,6 +242,14 @@ def verify_authorized_execution(expected_head: str, output_dir: str | Path) -> d
         raise ProvenanceError("DDCRE_PROVENANCE_SOURCE_MANIFEST_INVALID")
     if not isinstance(payload.get("tracked_files"), int) or payload["tracked_files"] <= 0:
         raise ProvenanceError("DDCRE_PROVENANCE_TRACKED_FILES_INVALID")
+    if payload.get("preexecution_gates") != EXPECTED_PREEXECUTION_GATES:
+        raise ProvenanceError("DDCRE_PROVENANCE_PREEXECUTION_GATES_INVALID")
+    regression_digest = payload.get("complete_regression_sha256")
+    if not isinstance(regression_digest, str) or not SHA256.fullmatch(regression_digest):
+        raise ProvenanceError("DDCRE_PROVENANCE_REGRESSION_DIGEST_INVALID")
+    ddc_digest = payload.get("ddc_verification_sha256")
+    if not isinstance(ddc_digest, str) or not SHA256.fullmatch(ddc_digest):
+        raise ProvenanceError("DDCRE_PROVENANCE_DDC_DIGEST_INVALID")
     if _expiry(payload.get("job_expires_at")) <= datetime.now(timezone.utc):
         raise ProvenanceError("DDCRE_PROVENANCE_EXPIRED")
 
@@ -271,6 +285,9 @@ def verify_authorized_execution(expected_head: str, output_dir: str | Path) -> d
         "tracked_files": payload["tracked_files"],
         "source_directory_identity": payload["source_directory_identity"],
         "output_parent_identity": payload["output_parent_identity"],
+        "preexecution_gates": payload["preexecution_gates"],
+        "complete_regression_sha256": regression_digest,
+        "ddc_verification_sha256": ddc_digest,
         "key_fingerprint": EXPECTED_KEY_FINGERPRINT,
         "provenance_document_sha256": "sha256:" + hashlib.sha256(raw).hexdigest(),
         "authority_class": payload["authority_class"],
