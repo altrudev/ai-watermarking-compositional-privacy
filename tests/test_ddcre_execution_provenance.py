@@ -78,7 +78,7 @@ class DDCREExecutionProvenanceTests(unittest.TestCase):
         return {
             "schema": prov.PROVENANCE_SCHEMA,
             "issuer": "DDC Remote Executor",
-            "executor_version": "0.6.1",
+            "executor_version": "0.6.2",
             "job_id": "a" * 32,
             "request_digest": "sha256:" + "b" * 64,
             "job_expires_at": (datetime.now(timezone.utc) + timedelta(minutes=20)).isoformat(),
@@ -95,7 +95,23 @@ class DDCREExecutionProvenanceTests(unittest.TestCase):
             "output_parent_identity": prov._directory_identity(output_parent),
             "profile": prov.EXPECTED_PROFILE,
             "entrypoint": prov.EXPECTED_ENTRYPOINT,
+            "preexecution_gates": dict(prov.EXPECTED_PREEXECUTION_GATES),
+            "complete_regression_sha256": "sha256:" + "c" * 64,
+            "ddc_verification_sha256": "sha256:" + "d" * 64,
         }
+
+    def _verify(self, repo: Path, head: str, output_parent: Path, document: dict, public_key: Path, fingerprint: str, root: Path):
+        provenance_path = root / "provenance.json"
+        provenance_path.write_text(json.dumps(document), encoding="utf-8")
+        previous = Path.cwd()
+        os.chdir(repo)
+        try:
+            with mock.patch.object(prov, "PROVENANCE_PATH", provenance_path), mock.patch.object(
+                prov, "PUBLIC_KEY_PATH", public_key
+            ), mock.patch.object(prov, "EXPECTED_KEY_FINGERPRINT", fingerprint):
+                return prov.verify_authorized_execution(head, output_parent / "bundle")
+        finally:
+            os.chdir(previous)
 
     def test_valid_signed_exact_bound_provenance_passes(self):
         with tempfile.TemporaryDirectory() as td:
@@ -106,20 +122,13 @@ class DDCREExecutionProvenanceTests(unittest.TestCase):
             private_key, public_key, fingerprint = self._keypair(root)
             payload = self._payload(repo, head, output_parent)
             document = self._sign(payload, private_key, fingerprint, root)
-            provenance_path = root / "provenance.json"
-            provenance_path.write_text(json.dumps(document), encoding="utf-8")
-            previous = Path.cwd()
-            os.chdir(repo)
-            try:
-                with mock.patch.object(prov, "PROVENANCE_PATH", provenance_path), mock.patch.object(
-                    prov, "PUBLIC_KEY_PATH", public_key
-                ), mock.patch.object(prov, "EXPECTED_KEY_FINGERPRINT", fingerprint):
-                    result = prov.verify_authorized_execution(head, output_parent / "bundle")
-            finally:
-                os.chdir(previous)
+            result = self._verify(repo, head, output_parent, document, public_key, fingerprint, root)
             self.assertEqual(result["status"], "PASS")
             self.assertTrue(result["independently_verified_by_v09_runner"])
             self.assertEqual(result["revision"], head)
+            self.assertEqual(result["preexecution_gates"], prov.EXPECTED_PREEXECUTION_GATES)
+            self.assertTrue(prov.SHA256.fullmatch(result["complete_regression_sha256"]))
+            self.assertTrue(prov.SHA256.fullmatch(result["ddc_verification_sha256"]))
 
     def test_tampered_payload_fails_signature(self):
         with tempfile.TemporaryDirectory() as td:
@@ -130,19 +139,35 @@ class DDCREExecutionProvenanceTests(unittest.TestCase):
             private_key, public_key, fingerprint = self._keypair(root)
             payload = self._payload(repo, head, output_parent)
             document = self._sign(payload, private_key, fingerprint, root)
-            document["payload"]["request_digest"] = "sha256:" + "c" * 64
-            provenance_path = root / "provenance.json"
-            provenance_path.write_text(json.dumps(document), encoding="utf-8")
-            previous = Path.cwd()
-            os.chdir(repo)
-            try:
-                with mock.patch.object(prov, "PROVENANCE_PATH", provenance_path), mock.patch.object(
-                    prov, "PUBLIC_KEY_PATH", public_key
-                ), mock.patch.object(prov, "EXPECTED_KEY_FINGERPRINT", fingerprint):
-                    with self.assertRaisesRegex(prov.ProvenanceError, "SIGNATURE_INVALID"):
-                        prov.verify_authorized_execution(head, output_parent / "bundle")
-            finally:
-                os.chdir(previous)
+            document["payload"]["request_digest"] = "sha256:" + "e" * 64
+            with self.assertRaisesRegex(prov.ProvenanceError, "SIGNATURE_INVALID"):
+                self._verify(repo, head, output_parent, document, public_key, fingerprint, root)
+
+    def test_signed_nonpass_preexecution_gate_is_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            repo, head = self._repo(root)
+            output_parent = root / "evidence"
+            output_parent.mkdir()
+            private_key, public_key, fingerprint = self._keypair(root)
+            payload = self._payload(repo, head, output_parent)
+            payload["preexecution_gates"]["ddc_verification"] = "BLOCKED"
+            document = self._sign(payload, private_key, fingerprint, root)
+            with self.assertRaisesRegex(prov.ProvenanceError, "PREEXECUTION_GATES_INVALID"):
+                self._verify(repo, head, output_parent, document, public_key, fingerprint, root)
+
+    def test_signed_missing_gate_digest_is_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            repo, head = self._repo(root)
+            output_parent = root / "evidence"
+            output_parent.mkdir()
+            private_key, public_key, fingerprint = self._keypair(root)
+            payload = self._payload(repo, head, output_parent)
+            payload.pop("ddc_verification_sha256")
+            document = self._sign(payload, private_key, fingerprint, root)
+            with self.assertRaisesRegex(prov.ProvenanceError, "PAYLOAD_FIELDS_INVALID"):
+                self._verify(repo, head, output_parent, document, public_key, fingerprint, root)
 
     def test_spoof_environment_flag_does_not_create_authority(self):
         with tempfile.TemporaryDirectory() as td, mock.patch.dict(os.environ, {"DDCRE_LAUNCHED": "1"}, clear=False):
